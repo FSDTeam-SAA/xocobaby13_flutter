@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
-import 'package:xocobaby13/feature/auth/controller/reset_password_controller.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
@@ -18,60 +16,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  late final SnackbarNotifier _snackbarNotifier;
-  late final ResetPasswordController _resetPasswordController;
-  late final String _email;
-  late final String _otp;
-
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  bool _busy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final dynamic arg = Get.arguments;
-    final Map<String, dynamic> data = arg is Map<String, dynamic>
-        ? arg
-        : <String, dynamic>{};
-    _email = (data['email'] ?? '').toString();
-    _otp = (data['otp'] ?? '').toString();
-
-    _snackbarNotifier = SnackbarNotifier(context: context);
-    _resetPasswordController = ResetPasswordController(_snackbarNotifier);
-  }
 
   @override
   void dispose() {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _resetPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    if (_email.isEmpty || _otp.isEmpty) {
-      _snackbarNotifier.notifyError(
-        message: 'Verification session expired. Please request code again.',
-      );
-      Get.offAllNamed(AuthRouteNames.forgotPassword);
-      return;
-    }
-
-    _resetPasswordController.email = _email;
-    _resetPasswordController.otp = _otp;
-    _resetPasswordController.password = _passwordController.text;
-    _resetPasswordController.confirmPassword = _confirmPasswordController.text;
-
-    setState(() => _busy = true);
-    await _resetPasswordController.resetPassword(
-      onSuccess: () {
-        Get.offAllNamed(AuthRouteNames.login);
-      },
-    );
-    if (mounted) {
-      setState(() => _busy = false);
-    }
+  void _submit() {
+    FocusScope.of(context).unfocus();
+    Get.offAllNamed(AuthRouteNames.login);
   }
 
   @override
@@ -79,6 +36,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     return AuthScaffold(
       appTitle: 'The Bob App',
       showBack: true,
+      startFromTop: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -131,11 +89,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             ),
           ),
           const SizedBox(height: 22),
-          AuthPrimaryButton(
-            title: 'Update Password',
-            onTap: _submit,
-            loading: _busy,
-          ),
+          AuthPrimaryButton(title: 'Update Password', onTap: _submit),
         ],
       ),
     );

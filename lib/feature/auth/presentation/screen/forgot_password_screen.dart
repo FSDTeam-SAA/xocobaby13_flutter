@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
-import 'package:xocobaby13/feature/auth/controller/forget_password_controller.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
@@ -16,38 +14,18 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
 
-  late final ForgetPasswordController _forgetPasswordController;
-  bool _busy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _forgetPasswordController = ForgetPasswordController(
-      SnackbarNotifier(context: context),
-    );
-  }
-
   @override
   void dispose() {
     _emailController.dispose();
-    _forgetPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    _forgetPasswordController.email = _emailController.text.trim();
-    setState(() => _busy = true);
-    await _forgetPasswordController.sendForgetPasswordRequest(
-      onSuccess: () {
-        Get.toNamed(
-          AuthRouteNames.otpVerify,
-          arguments: <String, String>{'email': _emailController.text.trim()},
-        );
-      },
+  void _submit() {
+    FocusScope.of(context).unfocus();
+    Get.toNamed(
+      AuthRouteNames.otpVerify,
+      arguments: <String, String>{'email': _emailController.text.trim()},
     );
-    if (mounted) {
-      setState(() => _busy = false);
-    }
   }
 
   @override
@@ -78,7 +56,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             controller: _emailController,
           ),
           const SizedBox(height: 22),
-          AuthPrimaryButton(title: 'Send Code', onTap: _submit, loading: _busy),
+          AuthPrimaryButton(title: 'Send Code', onTap: _submit),
           const SizedBox(height: 24),
           InkWell(
             onTap: () => Get.offAllNamed(AuthRouteNames.login),

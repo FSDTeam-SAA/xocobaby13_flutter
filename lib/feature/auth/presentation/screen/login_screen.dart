@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
-import 'package:xocobaby13/feature/auth/controller/login_controller.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
@@ -17,47 +15,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  late final SnackbarNotifier _snackbarNotifier;
-  late final LoginsScreenController _loginController;
-
   bool _rememberMe = false;
   bool _obscurePassword = true;
-  bool _busy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _snackbarNotifier = SnackbarNotifier(context: context);
-    _loginController = LoginsScreenController(_snackbarNotifier);
-  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _loginController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  void _submit() {
     FocusScope.of(context).unfocus();
-    _loginController.email = _emailController.text.trim();
-    _loginController.password = _passwordController.text;
-
-    setState(() => _busy = true);
-    final bool success = await _loginController.login(
-      needVerification: () {
-        _snackbarNotifier.notifyError(
-          message: 'Your account needs verification.',
-        );
-      },
-    );
-    if (mounted) {
-      setState(() => _busy = false);
-    }
-    if (success) {
-      Get.offAllNamed(AuthRouteNames.home);
-    }
+    Get.offAllNamed(AuthRouteNames.home);
   }
 
   @override
@@ -194,7 +164,6 @@ class _LoginScreenState extends State<LoginScreen> {
             title: 'Sign in',
             icon: Icons.login_rounded,
             onTap: _submit,
-            loading: _busy,
           ),
         ],
       ),

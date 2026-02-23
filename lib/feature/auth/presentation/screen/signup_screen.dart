@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
-import 'package:xocobaby13/feature/auth/controller/register_controller.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
@@ -20,44 +18,20 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  late final RegisterScreenController _registerController;
   SignupRole _selectedRole = SignupRole.fisherman;
   bool _obscurePassword = true;
-  bool _busy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _registerController = RegisterScreenController(
-      SnackbarNotifier(context: context),
-    );
-  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _registerController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    _registerController.name = _nameController.text.trim();
-    _registerController.email = _emailController.text.trim();
-    _registerController.password = _passwordController.text;
-    _registerController.confirmPassword = _passwordController.text;
-    _registerController.phone = '0000000000';
-
-    setState(() => _busy = true);
-    await _registerController.register(
-      onSuccessNavigate: () {
-        Get.offAllNamed(AuthRouteNames.login);
-      },
-    );
-    if (mounted) {
-      setState(() => _busy = false);
-    }
+  void _submit() {
+    FocusScope.of(context).unfocus();
+    Get.offAllNamed(AuthRouteNames.login);
   }
 
   @override
@@ -175,7 +149,6 @@ class _SignupScreenState extends State<SignupScreen> {
             title: 'Create account',
             icon: Icons.person_add_alt_1_rounded,
             onTap: _submit,
-            loading: _busy,
           ),
           const SizedBox(height: 22),
           Row(
@@ -204,11 +177,7 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
-              onTap: () {
-                SnackbarNotifier(
-                  context: context,
-                ).notify(message: 'Google login is not configured yet.');
-              },
+              onTap: () => Get.offAllNamed(AuthRouteNames.home),
               child: const Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pinput/pinput.dart';
-import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
-import 'package:xocobaby13/feature/auth/controller/forget_password_controller.dart';
-import 'package:xocobaby13/feature/auth/controller/verify_email_controller.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
@@ -17,12 +14,8 @@ class OtpVerifyScreen extends StatefulWidget {
 
 class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   late final String _email;
-  late final VerifyEmailController _verifyController;
-  late final ForgetPasswordController _resendController;
-  late final SnackbarNotifier _snackbarNotifier;
 
   String _otp = '';
-  bool _busy = false;
 
   @override
   void initState() {
@@ -32,43 +25,18 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
         ? arg
         : <String, dynamic>{};
     _email = (data['email'] ?? '').toString();
-    _snackbarNotifier = SnackbarNotifier(context: context);
-    _verifyController = VerifyEmailController(_snackbarNotifier);
-    _resendController = ForgetPasswordController(_snackbarNotifier);
   }
 
-  @override
-  void dispose() {
-    _verifyController.dispose();
-    _resendController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _verify() async {
-    _verifyController.email = _email;
-    _verifyController.otp = _otp;
-
-    setState(() => _busy = true);
-    await _verifyController.verifyEmail(
-      onSuccess: () {
-        Get.toNamed(
-          AuthRouteNames.resetPassword,
-          arguments: <String, String>{'email': _email, 'otp': _otp},
-        );
-      },
+  void _verify() {
+    FocusScope.of(context).unfocus();
+    Get.toNamed(
+      AuthRouteNames.resetPassword,
+      arguments: <String, String>{'email': _email, 'otp': _otp},
     );
-    if (mounted) {
-      setState(() => _busy = false);
-    }
   }
 
-  Future<void> _resendCode() async {
-    _resendController.email = _email;
-    await _resendController.sendForgetPasswordRequest(
-      onSuccess: () {
-        _snackbarNotifier.notifySuccess(message: 'A new code has been sent.');
-      },
-    );
+  void _resendCode() {
+    Get.snackbar('Resend Code', 'Code resend is disabled for now.');
   }
 
   @override
@@ -91,6 +59,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
     return AuthScaffold(
       appTitle: 'The Bob App',
       showBack: true,
+      startFromTop: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -130,7 +99,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
             onChanged: (String value) => _otp = value,
           ),
           const SizedBox(height: 24),
-          AuthPrimaryButton(title: 'Continue', onTap: _verify, loading: _busy),
+          AuthPrimaryButton(title: 'Continue', onTap: _verify),
           const SizedBox(height: 24),
           Center(
             child: Wrap(
