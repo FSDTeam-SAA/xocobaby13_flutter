@@ -1,8 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 
-import 'onboarding_1.dart';
 import 'widgets/onboarding_splash_logo.dart';
 import 'widgets/onboarding_styles.dart';
 
@@ -21,9 +22,7 @@ class _OnboardingSplashScreenState extends State<OnboardingSplashScreen> {
     super.initState();
     _timer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const Onboarding1Screen()),
-      );
+      Get.offNamed(AuthRouteNames.onboarding1);
     });
   }
 
