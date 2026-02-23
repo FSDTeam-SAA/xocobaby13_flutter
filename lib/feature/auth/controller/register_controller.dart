@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/helpers/handle_fold.dart';
-import '../../../core/helpers/validation.dart';
 import '../../../core/notifiers/button_status_notifier.dart';
 import '../../../core/notifiers/snackbar_notifier.dart';
 import '../interface/auth_interface.dart';
@@ -33,7 +32,6 @@ class RegisterScreenController extends ChangeNotifier {
   set name(String v) {
     if (v != _name) {
       _name = v.trim();
-      _canRegister();
       notifyListeners();
     }
   }
@@ -41,7 +39,6 @@ class RegisterScreenController extends ChangeNotifier {
   set email(String v) {
     if (v != _email) {
       _email = v.trim();
-      _canRegister();
       notifyListeners();
     }
   }
@@ -49,7 +46,6 @@ class RegisterScreenController extends ChangeNotifier {
   set phone(String v) {
     if (v != _phone) {
       _phone = v.trim();
-      _canRegister();
       notifyListeners();
     }
   }
@@ -57,7 +53,6 @@ class RegisterScreenController extends ChangeNotifier {
   set password(String v) {
     if (v != _password) {
       _password = v;
-      _canRegister();
       notifyListeners();
     }
   }
@@ -65,38 +60,13 @@ class RegisterScreenController extends ChangeNotifier {
   set confirmPassword(String v) {
     if (v != _confirmPassword) {
       _confirmPassword = v;
-      _canRegister();
       notifyListeners();
-    }
-  }
-
-  // Local “can submit” check so the UI doesn’t need to access internal fields of ProcessStatusNotifier
-  bool get canSubmit =>
-      _name.isNotEmpty &&
-      _email.isNotEmpty &&
-      isEmail(_email) &&
-      _phone.isNotEmpty &&
-      _password.isNotEmpty &&
-      _password.length >= 6 &&
-      _confirmPassword.isNotEmpty &&
-      _confirmPassword == _password;
-
-  void _canRegister() {
-    if (canSubmit) {
-      processStatusNotifier.setEnabled();
-    } else {
-      processStatusNotifier.setDisabled();
     }
   }
 
   Future<void> register({
     VoidCallback? onSuccessNavigate, // Optional: navigate upon success
   }) async {
-    // Guard
-    if (!canSubmit) {
-      // snackbarNotifier.error(message: 'Please fill all fields correctly.');
-      return;
-    }
     _busy = true;
     notifyListeners();
     processStatusNotifier.setLoading();

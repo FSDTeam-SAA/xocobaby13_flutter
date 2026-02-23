@@ -22,28 +22,10 @@ class ResetPasswordController extends ChangeNotifier {
 
   ResetPasswordController(this.snackbarNotifier);
 
-  bool canReset() {
-    return _email.isNotEmpty &&
-        _otp.isNotEmpty &&
-        _otp.length >= 6 &&
-        _password.isNotEmpty &&
-        _password.length >= 6 &&
-        _confirmPassword.isNotEmpty &&
-        _password == _confirmPassword;
-  }
-
-  void updateButtonState() {
-    if (canReset()) {
-      processStatusNotifier.setEnabled();
-    } else {
-      processStatusNotifier.setDisabled();
-    }
-  }
-
   set email(String value) {
     if (value != _email) {
       _email = value.trim();
-      updateButtonState();
+      processStatusNotifier.setEnabled();
       notifyListeners();
     }
   }
@@ -51,7 +33,7 @@ class ResetPasswordController extends ChangeNotifier {
   set otp(String value) {
     if (value != _otp) {
       _otp = value.trim();
-      updateButtonState();
+      processStatusNotifier.setEnabled();
       notifyListeners();
     }
   }
@@ -59,7 +41,7 @@ class ResetPasswordController extends ChangeNotifier {
   set password(String value) {
     if (value != _password) {
       _password = value;
-      updateButtonState();
+      processStatusNotifier.setEnabled();
       notifyListeners();
     }
   }
@@ -67,23 +49,12 @@ class ResetPasswordController extends ChangeNotifier {
   set confirmPassword(String value) {
     if (value != _confirmPassword) {
       _confirmPassword = value;
-      updateButtonState();
+      processStatusNotifier.setEnabled();
       notifyListeners();
     }
   }
 
   Future<void> resetPassword({required VoidCallback onSuccess}) async {
-    if (!canReset()) {
-      if (_password != _confirmPassword) {
-        snackbarNotifier.notifyError(message: 'Passwords do not match');
-      } else {
-        snackbarNotifier.notifyError(
-          message: 'Please fill all fields correctly',
-        );
-      }
-      return;
-    }
-
     processStatusNotifier.setLoading();
 
     await Future.delayed(const Duration(milliseconds: 500));
