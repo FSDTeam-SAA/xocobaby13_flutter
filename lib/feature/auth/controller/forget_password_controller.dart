@@ -15,22 +15,10 @@ class ForgetPasswordController extends ChangeNotifier {
 
   ForgetPasswordController(this.snackbarNotifier);
 
-  bool canSend() {
-    return _email.isNotEmpty;
-  }
-
-  void updateButtonState() {
-    if (canSend()) {
-      processStatusNotifier.setEnabled();
-    } else {
-      processStatusNotifier.setDisabled();
-    }
-  }
-
   set email(String value) {
     if (value != _email) {
       _email = value.trim();
-      updateButtonState();
+      processStatusNotifier.setEnabled();
       notifyListeners();
     }
   }
@@ -38,11 +26,6 @@ class ForgetPasswordController extends ChangeNotifier {
   Future<void> sendForgetPasswordRequest({
     required VoidCallback onSuccess,
   }) async {
-    if (!canSend()) {
-      snackbarNotifier.notifyError(message: 'Please enter a valid email');
-      return;
-    }
-
     processStatusNotifier.setLoading();
 
     await Future.delayed(const Duration(milliseconds: 500));

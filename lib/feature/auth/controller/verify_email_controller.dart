@@ -18,22 +18,10 @@ class VerifyEmailController extends ChangeNotifier {
 
   VerifyEmailController(this.snackbarNotifier);
 
-  bool canVerify() {
-    return _email.isNotEmpty && _otp.isNotEmpty && _otp.length >= 6;
-  }
-
-  void updateButtonState() {
-    if (canVerify()) {
-      processStatusNotifier.setEnabled();
-    } else {
-      processStatusNotifier.setDisabled();
-    }
-  }
-
   set email(String value) {
     if (value != _email) {
       _email = value.trim();
-      updateButtonState();
+      processStatusNotifier.setEnabled();
       notifyListeners();
     }
   }
@@ -41,17 +29,12 @@ class VerifyEmailController extends ChangeNotifier {
   set otp(String value) {
     if (value != _otp) {
       _otp = value;
-      updateButtonState();
+      processStatusNotifier.setEnabled();
       notifyListeners();
     }
   }
 
   Future<void> verifyEmail({required VoidCallback onSuccess}) async {
-    if (!canVerify()) {
-      snackbarNotifier.notifyError(message: 'Please enter email and valid OTP');
-      return;
-    }
-
     processStatusNotifier.setLoading();
 
     await Future.delayed(const Duration(milliseconds: 500));
