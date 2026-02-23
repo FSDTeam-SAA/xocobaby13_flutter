@@ -62,9 +62,9 @@ const List<OnboardingPageData> onboardingPages = <OnboardingPageData>[
   ),
   OnboardingPageData(
     badgeColor: Color(0xFF56B7E7),
-    badgeAssetPath: 'assets/onboarding/onboarding3_badge_image.png',
-    frontImagePath: 'assets/onboarding/onboarding3_front_image.png',
-    backImagePath: 'assets/onboarding/onboarding3_back_image.png',
+    badgeAssetPath: 'assets/onboarding/onboarding3badge.png',
+    frontImagePath: 'assets/onboarding/onboarding3font.png',
+    backImagePath: 'assets/onboarding/onboarding3back.png',
     reviewerImagePath:
         'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
     reviewerName: 'Rani Roy',
@@ -74,20 +74,35 @@ const List<OnboardingPageData> onboardingPages = <OnboardingPageData>[
     activeIndex: 2,
     useExactAssetLayout: true,
   ),
+
+
   OnboardingPageData(
     badgeColor: Color(0xFFCEE0ED),
-    badgeIcon: Icons.phishing,
-    frontImagePath:
-        'https://images.unsplash.com/photo-1579468297905-a01d60244f85?auto=format&fit=crop&w=900&q=80',
-    backImagePath:
-        'https://images.unsplash.com/photo-1504274066651-8d31a536b11a?auto=format&fit=crop&w=900&q=80',
+    badgeAssetPath: 'assets/onboarding/onbording2badge.png',
+    frontImagePath: 'assets/onboarding/onbording2font.png',
+    backImagePath: 'assets/onboarding/onboding2back.png',
     reviewerImagePath:
-        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+        'assets/onboarding/2a57e2b5f2e35b52b3ad296902cc9866a80aa709.jpg',
     reviewerName: 'Mr. Perua',
     reviewerRating: '4.5',
-    title: 'Turn Your Lake Into a\nDestination',
+    title: 'Your Fishing Journey\nStarts Here',
     subtitle:
         'Find the best fishing spots, track conditions and turn every trip into a perfect catch.',
     activeIndex: 3,
+    useExactAssetLayout: true,
   ),
+  // OnboardingPageData(
+  //   badgeColor: Color(0xFFCEE0ED),
+  //   badgeAssetPath: 'assets/onboarding/onbording2badge.png',
+  //   frontImagePath: 'assets/onboarding/onbording2font.png',
+  //   backImagePath: 'assets/onboarding/onboding2back.png',
+  //   reviewerImagePath:
+  //       'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+  //   reviewerName: 'Mr. Perua',
+  //   reviewerRating: '4.5',
+  //   title: 'Turn Your Lake Into a\nDestination',
+  //   subtitle:
+  //       'Find the best fishing spots, track conditions and turn every trip into a perfect catch.',
+  //   activeIndex: 3,
+  // ),
 ];
