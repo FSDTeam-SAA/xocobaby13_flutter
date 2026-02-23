@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'onboarding_5.dart';
+import 'onboarding_1.dart';
 import 'widgets/onboarding_splash_logo.dart';
 import 'widgets/onboarding_styles.dart';
 
@@ -22,7 +22,7 @@ class _OnboardingSplashScreenState extends State<OnboardingSplashScreen> {
     _timer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const Onboarding5Screen()),
+        MaterialPageRoute<void>(builder: (_) => const Onboarding1Screen()),
       );
     });
   }

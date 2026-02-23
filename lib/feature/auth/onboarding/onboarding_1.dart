@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:xocobaby13/feature/auth/presentation/screen/login_screen.dart';
 
 import 'data/onboarding_page_data.dart';
+import 'onboarding_2.dart';
 import 'widgets/onboarding_template.dart';
 
-class Onboarding8Screen extends StatelessWidget {
-  const Onboarding8Screen({super.key});
+class Onboarding1Screen extends StatelessWidget {
+  const Onboarding1Screen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return OnboardingTemplate(
-      data: onboardingPages[3],
+      data: onboardingPages[0],
       onNext: () {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+          MaterialPageRoute<void>(builder: (_) => const Onboarding2Screen()),
         );
       },
     );

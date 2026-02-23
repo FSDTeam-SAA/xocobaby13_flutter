@@ -1,5 +1,5 @@
 export 'onboarding_splash_screen.dart';
-export 'onboarding_5.dart';
-export 'onboarding_6.dart';
-export 'onboarding_7.dart';
-export 'onboarding_8.dart';
+export 'onboarding_1.dart';
+export 'onboarding_2.dart';
+export 'onboarding_3.dart';
+export 'onboarding_4.dart';

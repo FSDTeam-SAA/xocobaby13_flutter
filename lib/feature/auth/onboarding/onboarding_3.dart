@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'data/onboarding_page_data.dart';
-import 'onboarding_8.dart';
+import 'onboarding_4.dart';
 import 'widgets/onboarding_template.dart';
 
-class Onboarding7Screen extends StatelessWidget {
-  const Onboarding7Screen({super.key});
+class Onboarding3Screen extends StatelessWidget {
+  const Onboarding3Screen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +13,7 @@ class Onboarding7Screen extends StatelessWidget {
       data: onboardingPages[2],
       onNext: () {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => const Onboarding8Screen()),
+          MaterialPageRoute<void>(builder: (_) => const Onboarding4Screen()),
         );
       },
     );

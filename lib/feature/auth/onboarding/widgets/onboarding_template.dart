@@ -27,7 +27,6 @@ class OnboardingTemplate extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 0),
               child: Column(
                 children: <Widget>[
-                  const SizedBox(height: 6),
                   OnboardingPhotoStack(
                     frontImagePath: data.frontImagePath,
                     backImagePath: data.backImagePath,
@@ -39,13 +38,13 @@ class OnboardingTemplate extends StatelessWidget {
                     badgeAssetPath: data.badgeAssetPath,
                     useExactAssetLayout: data.useExactAssetLayout,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 36),
                   Text(
                     data.title,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: OnboardingStyles.title,
-                      fontSize: 15.2 * 1.6,
+                      fontSize: 15.2 * 1.9,
                       height: 1.15,
                       fontWeight: FontWeight.w700,
                     ),
@@ -64,14 +63,16 @@ class OnboardingTemplate extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 24),
                   OnboardingPageIndicator(activeIndex: data.activeIndex),
-                  const Spacer(),
+                  // const Spacer(),
+                  const SizedBox(height: 36),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: OnboardingPrimaryButton(onPressed: onNext),
                   ),
-                  const SizedBox(height: 24),
+                  
+                  const Spacer(),
                 ],
               ),
             );

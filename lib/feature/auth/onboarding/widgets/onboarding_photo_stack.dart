@@ -48,7 +48,7 @@ class OnboardingPhotoStack extends StatelessWidget {
           clipBehavior: Clip.none,
           children: <Widget>[
             Positioned(
-              left: 70 * scale,
+              left: 75 * scale,
               top: 84 * scale,
               child: OnboardingBadgeBubble(
                 color: badgeColor,
@@ -77,7 +77,7 @@ class OnboardingPhotoStack extends StatelessWidget {
             ),
             Positioned(
               left: 223 * scale,
-              top: 355 * scale,
+              top: 340 * scale,
               child: Transform.scale(
                 scale: scale.clamp(0.9, 1.05),
                 alignment: Alignment.topLeft,
