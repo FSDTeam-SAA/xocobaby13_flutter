@@ -182,13 +182,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'G',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: AuthPalette.linkBlue,
-                      ),
+                    Image(
+                      image: AssetImage('assets/images/G_logo.png'),
+                      width: 24,
+                      height: 24,
                     ),
                     SizedBox(width: 12),
                     Text(
