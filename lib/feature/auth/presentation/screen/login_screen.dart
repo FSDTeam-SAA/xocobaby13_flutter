@@ -30,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackbarNotifier(context: context),
     );
     _loginController.processStatusNotifier.addListener(_onStatusChanged);
+    _loginController.addListener(_onStatusChanged);
   }
 
   void _onStatusChanged() {
@@ -41,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     _loginController.processStatusNotifier.removeListener(_onStatusChanged);
+    _loginController.removeListener(_onStatusChanged);
     _loginController.dispose();
     _emailController.dispose();
     _passwordController.dispose();

@@ -25,6 +25,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       SnackbarNotifier(context: context),
     );
     _controller.processStatusNotifier.addListener(_onStatusChanged);
+    _controller.addListener(_onStatusChanged);
   }
 
   void _onStatusChanged() {
@@ -36,6 +37,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void dispose() {
     _controller.processStatusNotifier.removeListener(_onStatusChanged);
+    _controller.removeListener(_onStatusChanged);
     _controller.dispose();
     _emailController.dispose();
     super.dispose();

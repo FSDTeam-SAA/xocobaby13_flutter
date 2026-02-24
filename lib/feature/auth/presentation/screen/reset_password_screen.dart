@@ -36,6 +36,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       ..email = widget.email
       ..otp = widget.otp;
     _controller.processStatusNotifier.addListener(_onStatusChanged);
+    _controller.addListener(_onStatusChanged);
   }
 
   void _onStatusChanged() {
@@ -47,6 +48,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   void dispose() {
     _controller.processStatusNotifier.removeListener(_onStatusChanged);
+    _controller.removeListener(_onStatusChanged);
     _controller.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -70,10 +72,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     final isLoading =
         _controller.processStatusNotifier.status is LoadingStatus;
+    final passwordText = _passwordController.text;
+    final confirmText = _confirmPasswordController.text;
     final canSubmit =
-        _controller.password.isNotEmpty &&
-        _controller.confirmPassword.isNotEmpty &&
-        _controller.password == _controller.confirmPassword &&
+        passwordText.isNotEmpty &&
+        confirmText.isNotEmpty &&
+        passwordText == confirmText &&
         !isLoading;
     return AuthScaffold(
       appTitle: 'The Bob App',
@@ -100,7 +104,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             hint: '••••••',
             controller: _passwordController,
             obscureText: _obscurePassword,
-            onChanged: (value) => _controller.password = value,
+            onChanged: (value) {
+              _controller.password = value;
+              setState(() {});
+            },
             suffixIcon: IconButton(
               onPressed: () {
                 setState(() => _obscurePassword = !_obscurePassword);
@@ -119,7 +126,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             hint: '••••••',
             controller: _confirmPasswordController,
             obscureText: _obscureConfirm,
-            onChanged: (value) => _controller.confirmPassword = value,
+            onChanged: (value) {
+              _controller.confirmPassword = value;
+              setState(() {});
+            },
             suffixIcon: IconButton(
               onPressed: () {
                 setState(() => _obscureConfirm = !_obscureConfirm);

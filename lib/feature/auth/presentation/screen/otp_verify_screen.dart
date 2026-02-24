@@ -19,6 +19,7 @@ class OtpVerifyScreen extends StatefulWidget {
 
 class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   late final VerifyEmailController _controller;
+  String _otp = '';
 
   @override
   void initState() {
@@ -28,6 +29,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
     );
     _controller.email = widget.email;
     _controller.processStatusNotifier.addListener(_onStatusChanged);
+    _controller.addListener(_onStatusChanged);
   }
 
   void _onStatusChanged() {
@@ -39,6 +41,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   @override
   void dispose() {
     _controller.processStatusNotifier.removeListener(_onStatusChanged);
+    _controller.removeListener(_onStatusChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -68,7 +71,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   Widget build(BuildContext context) {
     final isLoading =
         _controller.processStatusNotifier.status is LoadingStatus;
-    final canSubmit = _controller.otp.trim().length == 6 && !isLoading;
+    final canSubmit = _otp.trim().length == 6 && !isLoading;
     final PinTheme pinTheme = PinTheme(
       width: 50,
       height: 50,
@@ -124,7 +127,13 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
             ),
             submittedPinTheme: pinTheme,
             separatorBuilder: (int index) => const SizedBox(width: 6),
-            onChanged: (String value) => _controller.otp = value,
+            onChanged: (String value) {
+              _otp = value;
+              _controller.otp = value;
+              if (mounted) {
+                setState(() {});
+              }
+            },
           ),
           const SizedBox(height: 24),
           AuthPrimaryButton(
