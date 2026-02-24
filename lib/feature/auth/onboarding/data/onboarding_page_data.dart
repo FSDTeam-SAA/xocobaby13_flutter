@@ -75,7 +75,6 @@ const List<OnboardingPageData> onboardingPages = <OnboardingPageData>[
     useExactAssetLayout: true,
   ),
 
-
   OnboardingPageData(
     badgeColor: Color(0xFFCEE0ED),
     badgeAssetPath: 'assets/onboarding/onbording2badge.png',

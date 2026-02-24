@@ -71,7 +71,7 @@ class OnboardingTemplate extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: OnboardingPrimaryButton(onPressed: onNext),
                   ),
-                  
+
                   const Spacer(),
                 ],
               ),

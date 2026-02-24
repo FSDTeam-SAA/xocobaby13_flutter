@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
-import 'package:get/get.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _submit() {
     FocusScope.of(context).unfocus();
-    Get.offAllNamed(AuthRouteNames.home);
+    context.go(NavigationRouteNames.main);
   }
 
   @override
@@ -61,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               GestureDetector(
-                onTap: () => Get.toNamed(AuthRouteNames.signup),
+                onTap: () => context.push(AuthRouteNames.signup),
                 child: const Text(
                   'create a new account',
                   style: TextStyle(
@@ -142,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
-                    onTap: () => Get.toNamed(AuthRouteNames.forgotPassword),
+                    onTap: () => context.push(AuthRouteNames.forgotPassword),
                     child: const FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(

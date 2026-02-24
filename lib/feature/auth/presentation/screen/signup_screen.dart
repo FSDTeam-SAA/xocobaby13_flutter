@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
@@ -31,7 +32,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   void _submit() {
     FocusScope.of(context).unfocus();
-    Get.offAllNamed(AuthRouteNames.login);
+    context.go(AuthRouteNames.login);
   }
 
   @override
@@ -66,7 +67,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
               GestureDetector(
-                onTap: () => Get.offAllNamed(AuthRouteNames.login),
+                onTap: () => context.go(AuthRouteNames.login),
                 child: const Text(
                   'sign in to your existing account',
                   style: TextStyle(
@@ -177,7 +178,7 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
-              onTap: () => Get.offAllNamed(AuthRouteNames.home),
+              onTap: () => context.go(NavigationRouteNames.main),
               child: const Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

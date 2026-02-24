@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 
 import 'data/onboarding_page_data.dart';
@@ -12,7 +12,7 @@ class Onboarding2Screen extends StatelessWidget {
   Widget build(BuildContext context) {
     return OnboardingTemplate(
       data: onboardingPages[1],
-      onNext: () => Get.offNamed(AuthRouteNames.onboarding3),
+      onNext: () => context.go(AuthRouteNames.onboarding3),
     );
   }
 }
