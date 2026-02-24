@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:xocobaby13/feature/home/presentation/screen/home_screen.dart';
 import 'package:xocobaby13/feature/navigation/controller/navigation_controller.dart';
 import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_navigation_bar_for_baby.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
@@ -33,7 +34,7 @@ class MainNavigationScreen extends StatelessWidget {
           child: IndexedStack(
             index: navigationController.selectedTabIndex.value,
             children: const <Widget>[
-              _TabPlaceholder(label: 'Home', icon: CupertinoIcons.home),
+              HomeScreen(),
               _TabPlaceholder(label: 'Bookings', icon: CupertinoIcons.calendar),
               _TabPlaceholder(label: 'Chat', icon: CupertinoIcons.chat_bubble),
               ProfileScreen(),
