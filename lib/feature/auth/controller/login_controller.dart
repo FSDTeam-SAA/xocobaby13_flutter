@@ -81,4 +81,10 @@ class LoginsScreenController extends ChangeNotifier {
       return false;
     }
   }
+
+  @override
+  void dispose() {
+    processStatusNotifier.dispose();
+    super.dispose();
+  }
 }

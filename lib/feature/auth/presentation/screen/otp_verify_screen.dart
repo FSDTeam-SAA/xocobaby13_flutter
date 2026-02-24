@@ -4,6 +4,9 @@ import 'package:pinput/pinput.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
+import 'package:xocobaby13/feature/auth/controller/verify_email_controller.dart';
+import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
+import 'package:xocobaby13/core/notifiers/button_status_notifier.dart';
 
 class OtpVerifyScreen extends StatefulWidget {
   final String email;
@@ -15,13 +18,43 @@ class OtpVerifyScreen extends StatefulWidget {
 }
 
 class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
-  String _otp = '';
+  late final VerifyEmailController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VerifyEmailController(
+      SnackbarNotifier(context: context),
+    );
+    _controller.email = widget.email;
+    _controller.processStatusNotifier.addListener(_onStatusChanged);
+  }
+
+  void _onStatusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.processStatusNotifier.removeListener(_onStatusChanged);
+    _controller.dispose();
+    super.dispose();
+  }
 
   void _verify() {
     FocusScope.of(context).unfocus();
-    context.push(
-      AuthRouteNames.resetPassword,
-      extra: <String, String>{'email': widget.email, 'otp': _otp},
+    _controller.verifyEmail(
+      onSuccess: () {
+        context.push(
+          AuthRouteNames.resetPassword,
+          extra: <String, String>{
+            'email': widget.email,
+            'otp': _controller.otp,
+          },
+        );
+      },
     );
   }
 
@@ -33,6 +66,9 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isLoading =
+        _controller.processStatusNotifier.status is LoadingStatus;
+    final canSubmit = _controller.otp.trim().length == 6 && !isLoading;
     final PinTheme pinTheme = PinTheme(
       width: 50,
       height: 50,
@@ -88,10 +124,14 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
             ),
             submittedPinTheme: pinTheme,
             separatorBuilder: (int index) => const SizedBox(width: 6),
-            onChanged: (String value) => _otp = value,
+            onChanged: (String value) => _controller.otp = value,
           ),
           const SizedBox(height: 24),
-          AuthPrimaryButton(title: 'Continue', onTap: _verify),
+          AuthPrimaryButton(
+            title: 'Continue',
+            onTap: canSubmit ? _verify : null,
+            loading: isLoading,
+          ),
           const SizedBox(height: 24),
           Center(
             child: Wrap(

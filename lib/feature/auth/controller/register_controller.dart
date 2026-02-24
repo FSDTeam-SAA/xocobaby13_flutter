@@ -13,25 +13,23 @@ class RegisterScreenController extends ChangeNotifier {
 
   RegisterScreenController(this.snackbarNotifier);
 
-  String _name = '';
+  String _fullName = '';
   String _email = '';
-  String _phone = '';
   String _password = '';
-  String _confirmPassword = '';
+  String _role = 'fisherman';
 
   // Simple flags you can use in UI without depending on ProcessStatusNotifier internals
   bool _busy = false;
   bool get isBusy => _busy;
 
-  String get name => _name;
+  String get fullName => _fullName;
   String get email => _email;
-  String get phone => _phone;
   String get password => _password;
-  String get confirmPassword => _confirmPassword;
+  String get role => _role;
 
-  set name(String v) {
-    if (v != _name) {
-      _name = v.trim();
+  set fullName(String v) {
+    if (v != _fullName) {
+      _fullName = v.trim();
       notifyListeners();
     }
   }
@@ -43,13 +41,6 @@ class RegisterScreenController extends ChangeNotifier {
     }
   }
 
-  set phone(String v) {
-    if (v != _phone) {
-      _phone = v.trim();
-      notifyListeners();
-    }
-  }
-
   set password(String v) {
     if (v != _password) {
       _password = v;
@@ -57,9 +48,9 @@ class RegisterScreenController extends ChangeNotifier {
     }
   }
 
-  set confirmPassword(String v) {
-    if (v != _confirmPassword) {
-      _confirmPassword = v;
+  set role(String v) {
+    if (v != _role) {
+      _role = v.trim();
       notifyListeners();
     }
   }
@@ -72,11 +63,10 @@ class RegisterScreenController extends ChangeNotifier {
     processStatusNotifier.setLoading();
 
     final payload = RegisterRequest(
-      name: _name,
+      fullName: _fullName,
       email: _email,
-      phone: _phone,
       password: _password,
-      confirmPassword: _confirmPassword,
+      role: _role,
     );
 
     // Optional small delay to match your login behavior
@@ -97,5 +87,11 @@ class RegisterScreenController extends ChangeNotifier {
 
     _busy = false;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    processStatusNotifier.dispose();
+    super.dispose();
   }
 }
