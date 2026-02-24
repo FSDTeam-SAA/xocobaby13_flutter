@@ -1,42 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
 
 class OtpVerifyScreen extends StatefulWidget {
-  const OtpVerifyScreen({super.key});
+  final String email;
+
+  const OtpVerifyScreen({super.key, this.email = ''});
 
   @override
   State<OtpVerifyScreen> createState() => _OtpVerifyScreenState();
 }
 
 class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
-  late final String _email;
-
   String _otp = '';
-
-  @override
-  void initState() {
-    super.initState();
-    final dynamic arg = Get.arguments;
-    final Map<String, dynamic> data = arg is Map<String, dynamic>
-        ? arg
-        : <String, dynamic>{};
-    _email = (data['email'] ?? '').toString();
-  }
 
   void _verify() {
     FocusScope.of(context).unfocus();
-    Get.toNamed(
+    context.push(
       AuthRouteNames.resetPassword,
-      arguments: <String, String>{'email': _email, 'otp': _otp},
+      extra: <String, String>{'email': widget.email, 'otp': _otp},
     );
   }
 
   void _resendCode() {
-    Get.snackbar('Resend Code', 'Code resend is disabled for now.');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Code resend is disabled for now.')),
+    );
   }
 
   @override

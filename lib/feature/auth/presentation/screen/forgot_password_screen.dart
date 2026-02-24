@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
@@ -22,9 +22,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   void _submit() {
     FocusScope.of(context).unfocus();
-    Get.toNamed(
+    context.push(
       AuthRouteNames.otpVerify,
-      arguments: <String, String>{'email': _emailController.text.trim()},
+      extra: <String, String>{'email': _emailController.text.trim()},
     );
   }
 
@@ -59,7 +59,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           AuthPrimaryButton(title: 'Send Code', onTap: _submit),
           const SizedBox(height: 24),
           InkWell(
-            onTap: () => Get.offAllNamed(AuthRouteNames.login),
+            onTap: () => context.go(AuthRouteNames.login),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

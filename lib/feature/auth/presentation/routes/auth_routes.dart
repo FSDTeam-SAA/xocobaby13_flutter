@@ -1,11 +1,10 @@
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/app/splash_view.dart';
 import 'package:xocobaby13/feature/auth/onboarding/onboarding_1.dart';
 import 'package:xocobaby13/feature/auth/onboarding/onboarding_2.dart';
 import 'package:xocobaby13/feature/auth/onboarding/onboarding_3.dart';
 import 'package:xocobaby13/feature/auth/onboarding/onboarding_4.dart';
 import 'package:xocobaby13/feature/auth/onboarding/onboarding_splash_screen.dart';
-import 'package:xocobaby13/feature/auth/presentation/screen/auth_home_screen.dart';
 import 'package:xocobaby13/feature/auth/presentation/screen/forgot_password_screen.dart';
 import 'package:xocobaby13/feature/auth/presentation/screen/login_screen.dart';
 import 'package:xocobaby13/feature/auth/presentation/screen/otp_verify_screen.dart';
@@ -27,60 +26,65 @@ class AuthRouteNames {
   static const String forgotPassword = '/auth/forgot-password';
   static const String otpVerify = '/auth/otp-verify';
   static const String resetPassword = '/auth/reset-password';
-  static const String home = '/auth/home';
 }
 
 class AuthRoutes {
   const AuthRoutes._();
 
-  static final List<GetPage<dynamic>> pages = <GetPage<dynamic>>[
-    GetPage<dynamic>(
-      name: AuthRouteNames.onboardingSplash,
-      page: () => const OnboardingSplashScreen(),
+  static final List<RouteBase> routes = <RouteBase>[
+    GoRoute(
+      path: AuthRouteNames.onboardingSplash,
+      builder: (_, _) => const OnboardingSplashScreen(),
     ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.splashView,
-      page: () => const SplashView(),
+    GoRoute(
+      path: AuthRouteNames.splashView,
+      builder: (_, _) => const SplashView(),
     ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.onboarding1,
-      page: () => const Onboarding1Screen(),
+    GoRoute(
+      path: AuthRouteNames.onboarding1,
+      builder: (_, _) => const Onboarding1Screen(),
     ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.onboarding2,
-      page: () => const Onboarding2Screen(),
+    GoRoute(
+      path: AuthRouteNames.onboarding2,
+      builder: (_, _) => const Onboarding2Screen(),
     ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.onboarding3,
-      page: () => const Onboarding3Screen(),
+    GoRoute(
+      path: AuthRouteNames.onboarding3,
+      builder: (_, _) => const Onboarding3Screen(),
     ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.onboarding4,
-      page: () => const Onboarding4Screen(),
+    GoRoute(
+      path: AuthRouteNames.onboarding4,
+      builder: (_, _) => const Onboarding4Screen(),
     ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.login,
-      page: () => const LoginScreen(),
+    GoRoute(path: AuthRouteNames.login, builder: (_, _) => const LoginScreen()),
+    GoRoute(
+      path: AuthRouteNames.signup,
+      builder: (_, _) => const SignupScreen(),
     ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.signup,
-      page: () => const SignupScreen(),
+    GoRoute(
+      path: AuthRouteNames.forgotPassword,
+      builder: (_, _) => const ForgotPasswordScreen(),
     ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.forgotPassword,
-      page: () => const ForgotPasswordScreen(),
+    GoRoute(
+      path: AuthRouteNames.otpVerify,
+      builder: (_, GoRouterState state) {
+        final Map<String, dynamic> data = state.extra is Map<String, dynamic>
+            ? state.extra! as Map<String, dynamic>
+            : <String, dynamic>{};
+        return OtpVerifyScreen(email: (data['email'] ?? '').toString());
+      },
     ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.otpVerify,
-      page: () => const OtpVerifyScreen(),
-    ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.resetPassword,
-      page: () => const ResetPasswordScreen(),
-    ),
-    GetPage<dynamic>(
-      name: AuthRouteNames.home,
-      page: () => const AuthHomeScreen(),
+    GoRoute(
+      path: AuthRouteNames.resetPassword,
+      builder: (_, GoRouterState state) {
+        final Map<String, dynamic> data = state.extra is Map<String, dynamic>
+            ? state.extra! as Map<String, dynamic>
+            : <String, dynamic>{};
+        return ResetPasswordScreen(
+          email: (data['email'] ?? '').toString(),
+          otp: (data['otp'] ?? '').toString(),
+        );
+      },
     ),
   ];
 }
