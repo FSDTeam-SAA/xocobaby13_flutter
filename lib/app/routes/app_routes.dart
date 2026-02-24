@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
+import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
 import 'package:xocobaby13/feature/profile/presentation/routes/profile_routes.dart';
 
@@ -10,6 +11,7 @@ class AppRouter {
     initialLocation: AuthRouteNames.onboardingSplash,
     routes: <RouteBase>[
       ...AuthRoutes.routes,
+      ...ChatRoutes.routes,
       ...NavigationRoutes.routes,
       ...ProfileRoutes.routes,
     ],

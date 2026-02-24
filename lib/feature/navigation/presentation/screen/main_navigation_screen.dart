@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xocobaby13/feature/navigation/controller/navigation_controller.dart';
 import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_navigation_bar_for_baby.dart';
+import 'package:xocobaby13/feature/chat/presentation/screen/chat_list_screen.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/profile_screen.dart';
 
@@ -35,7 +36,7 @@ class MainNavigationScreen extends StatelessWidget {
             children: const <Widget>[
               _TabPlaceholder(label: 'Home', icon: CupertinoIcons.home),
               _TabPlaceholder(label: 'Bookings', icon: CupertinoIcons.calendar),
-              _TabPlaceholder(label: 'Chat', icon: CupertinoIcons.chat_bubble),
+              ChatListScreen(),
               ProfileScreen(),
             ],
           ),

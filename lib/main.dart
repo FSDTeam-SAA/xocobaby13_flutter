@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Xocobaby13',
+      title: 'Xocobaby13', 
       theme: AppTheme.light,
       routerConfig: AppRouter.router,
     );
