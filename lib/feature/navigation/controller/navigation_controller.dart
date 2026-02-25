@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 
 class NavigationController extends GetxController {
-  final RxInt selectedTabIndex = 3.obs;
+  final RxInt selectedTabIndex = 0.obs;
 
   void setTabIndex(int index) {
     selectedTabIndex.value = index;

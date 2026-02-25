@@ -4,6 +4,8 @@ import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_rou
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
+import 'package:xocobaby13/feature/auth/controller/register_controller.dart';
+import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
 
 enum SignupRole { fisherman, spotOwner }
 
@@ -18,25 +20,65 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  late final RegisterScreenController _registerController;
 
   SignupRole _selectedRole = SignupRole.fisherman;
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    _registerController = RegisterScreenController(
+      SnackbarNotifier(context: context),
+    );
+    _registerController.addListener(_onControllerChanged);
+  }
+
+  void _onControllerChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
+    _registerController.removeListener(_onControllerChanged);
+    _registerController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  String _roleValue(SignupRole role) {
+    switch (role) {
+      case SignupRole.fisherman:
+        return 'fisherman';
+      case SignupRole.spotOwner:
+        return 'spotOwner';
+    }
+  }
+
   void _submit() {
     FocusScope.of(context).unfocus();
-    context.go(AuthRouteNames.login);
+    _registerController
+      ..fullName = _nameController.text
+      ..email = _emailController.text
+      ..password = _passwordController.text
+      ..role = _roleValue(_selectedRole);
+    _registerController.register(
+      onSuccessNavigate: () => context.go(AuthRouteNames.login),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLoading = _registerController.isBusy;
+    final canSubmit =
+        _registerController.fullName.isNotEmpty &&
+        _registerController.email.isNotEmpty &&
+        _registerController.password.isNotEmpty &&
+        !isLoading;
     return AuthScaffold(
       appTitle: 'The Bob App',
       showBack: true,
@@ -84,6 +126,7 @@ class _SignupScreenState extends State<SignupScreen> {
             label: 'Full name',
             hint: 'John Doe',
             controller: _nameController,
+            onChanged: (value) => _registerController.fullName = value,
           ),
           const SizedBox(height: 16),
           AuthInputField(
@@ -91,6 +134,7 @@ class _SignupScreenState extends State<SignupScreen> {
             hint: 'you@gmail.com',
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            onChanged: (value) => _registerController.email = value,
           ),
           const SizedBox(height: 16),
           AuthInputField(
@@ -98,6 +142,7 @@ class _SignupScreenState extends State<SignupScreen> {
             hint: '••••••',
             controller: _passwordController,
             obscureText: _obscurePassword,
+            onChanged: (value) => _registerController.password = value,
             suffixIcon: IconButton(
               onPressed: () {
                 setState(() => _obscurePassword = !_obscurePassword);
@@ -149,7 +194,8 @@ class _SignupScreenState extends State<SignupScreen> {
           AuthPrimaryButton(
             title: 'Create account',
             icon: Icons.person_add_alt_1_rounded,
-            onTap: _submit,
+            onTap: canSubmit ? _submit : null,
+            loading: isLoading,
           ),
           const SizedBox(height: 22),
           Row(

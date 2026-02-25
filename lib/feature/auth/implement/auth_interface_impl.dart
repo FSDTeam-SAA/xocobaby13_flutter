@@ -32,6 +32,8 @@ final class AuthInterfaceImpl extends AuthInterface {
         final responseBody = response.data is Map
             ? Map<String, dynamic>.from(response.data)
             : <String, dynamic>{};
+        final message =
+            responseBody['message']?.toString() ?? 'Register Successfuly';
         final responseData = responseBody["data"];
         final payload = responseData is Map
             ? Map<String, dynamic>.from(responseData)
@@ -85,7 +87,7 @@ final class AuthInterfaceImpl extends AuthInterface {
         }
 
         return Success(
-          message: 'Register Successfuly',
+          message: message,
           data: 'Successful Register.',
         );
       },
@@ -100,11 +102,17 @@ final class AuthInterfaceImpl extends AuthInterface {
     return await asyncTryCatch(
       tryFunc: () async {
         try {
-          await appPigeon.post(ApiEndpoints.logout, data: param.toJson());
+          final response =
+              await appPigeon.post(ApiEndpoints.logout, data: param.toJson());
+          final responseBody = response.data is Map
+              ? Map<String, dynamic>.from(response.data)
+              : <String, dynamic>{};
+          final message =
+              responseBody['message']?.toString() ?? 'Logout Succesfuly';
+          return Success(message: message, data: "Logged out");
         } finally {
           await appPigeon.logOut();
         }
-        return Success(message: 'Logout Succesfuly', data: "Logged out");
       },
     );
   }
@@ -244,7 +252,12 @@ final class AuthInterfaceImpl extends AuthInterface {
           ApiEndpoints.forgetPassword,
           data: param.toJson(),
         );
-        return Success(message: 'OTP send to your mail', data: '');
+        final responseBody = response.data is Map
+            ? Map<String, dynamic>.from(response.data)
+            : <String, dynamic>{};
+        final message =
+            responseBody['message']?.toString() ?? 'OTP send to your mail';
+        return Success(message: message, data: '');
       },
     );
   }
@@ -260,6 +273,11 @@ final class AuthInterfaceImpl extends AuthInterface {
           ApiEndpoints.verifyEmail,
           data: param.toJson(),
         );
+        final responseBody = response.data is Map
+            ? Map<String, dynamic>.from(response.data)
+            : <String, dynamic>{};
+        final message = responseBody['message']?.toString() ??
+            'Email verified successfully';
         final data = response.data['data'];
         String userId = '';
         if (data is Map) {
@@ -271,7 +289,7 @@ final class AuthInterfaceImpl extends AuthInterface {
             userId = data['user']['_id'].toString();
           }
         }
-        return Success(message: 'Email verified successfully', data: userId);
+        return Success(message: message, data: userId);
       },
     );
   }
@@ -283,8 +301,14 @@ final class AuthInterfaceImpl extends AuthInterface {
   }) async {
     return await asyncTryCatch(
       tryFunc: () async {
-        await appPigeon.post(ApiEndpoints.verifyEmail, data: param.toJson());
-        return Success(message: 'Email verified successfully', data: '');
+        final response =
+            await appPigeon.post(ApiEndpoints.verifyEmail, data: param.toJson());
+        final responseBody = response.data is Map
+            ? Map<String, dynamic>.from(response.data)
+            : <String, dynamic>{};
+        final message = responseBody['message']?.toString() ??
+            'Email verified successfully';
+        return Success(message: message, data: '');
       },
     );
   }
@@ -296,8 +320,16 @@ final class AuthInterfaceImpl extends AuthInterface {
   }) async {
     return await asyncTryCatch(
       tryFunc: () async {
-        await appPigeon.post(ApiEndpoints.resetPassword, data: param.toJson());
-        return Success(message: 'Password reset successfully', data: '');
+        final response = await appPigeon.post(
+          ApiEndpoints.resetPassword,
+          data: param.toJson(),
+        );
+        final responseBody = response.data is Map
+            ? Map<String, dynamic>.from(response.data)
+            : <String, dynamic>{};
+        final message =
+            responseBody['message']?.toString() ?? 'Password reset successfully';
+        return Success(message: message, data: '');
       },
     );
   }
@@ -309,8 +341,16 @@ final class AuthInterfaceImpl extends AuthInterface {
   }) async {
     return await asyncTryCatch(
       tryFunc: () async {
-        await appPigeon.post(ApiEndpoints.changePassword, data: param.toJson());
-        return Success(message: 'Password changed successfully', data: '');
+        final response = await appPigeon.post(
+          ApiEndpoints.changePassword,
+          data: param.toJson(),
+        );
+        final responseBody = response.data is Map
+            ? Map<String, dynamic>.from(response.data)
+            : <String, dynamic>{};
+        final message = responseBody['message']?.toString() ??
+            'Password changed successfully';
+        return Success(message: message, data: '');
       },
     );
   }

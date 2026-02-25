@@ -65,6 +65,7 @@ class ResetPasswordController extends ChangeNotifier {
             email: email,
             otp: otp,
             password: password,
+            confirmPassword: confirmPassword,
           ),
         )
         .then((result) {
