@@ -1,5 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
+import 'package:xocobaby13/feature/spot_owner/presentation/routes/spot_owner_routes.dart';
 
 class SpotOwnerHomeScreen extends StatelessWidget {
   const SpotOwnerHomeScreen({super.key});
@@ -65,10 +68,7 @@ class SpotOwnerHomeScreen extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       'Good Morning',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF3A4A5A),
-                      ),
+                      style: TextStyle(fontSize: 14, color: Color(0xFF3A4A5A)),
                     ),
                     SizedBox(height: 2),
                     Text(
@@ -83,7 +83,8 @@ class SpotOwnerHomeScreen extends StatelessWidget {
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: () => _showMessage(context, 'Notifications'),
+                  onTap: () =>
+                      context.push(NotificationRouteNames.notifications),
                   child: const _SpotOwnerNotificationBell(),
                 ),
               ],
@@ -107,7 +108,7 @@ class SpotOwnerHomeScreen extends StatelessWidget {
             _SpotOwnerActionCard(
               title: 'Create Event',
               subtitle: 'Schedule a new tournament',
-              onTap: () => _showMessage(context, 'Create Event'),
+              onTap: () => context.push(SpotOwnerRouteNames.createSpot),
             ),
             const SizedBox(height: 22),
             const Text(
@@ -124,10 +125,8 @@ class SpotOwnerHomeScreen extends StatelessWidget {
                   .map(
                     (_SpotOwnerEvent event) => _SpotOwnerEventCard(
                       data: event,
-                      onAnalytics: () => _showMessage(
-                        context,
-                        'Analytics for ${event.title}',
-                      ),
+                      onAnalytics: () =>
+                          context.push(SpotOwnerRouteNames.analytics),
                     ),
                   )
                   .toList(),
@@ -385,11 +384,11 @@ class _SpotOwnerEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFF1787CF), width: 1.2),
         boxShadow: const <BoxShadow>[
           BoxShadow(
@@ -402,21 +401,21 @@ class _SpotOwnerEventCard extends StatelessWidget {
       child: Row(
         children: <Widget>[
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(10),
             child: Image.network(
               data.imageUrl,
-              width: 94,
-              height: 94,
+              width: 150,
+              height: 100,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
-                width: 94,
-                height: 94,
+                width: 92,
+                height: 92,
                 color: const Color(0xFFE2E8F1),
                 child: const Icon(Icons.photo, size: 32),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,51 +423,52 @@ class _SpotOwnerEventCard extends StatelessWidget {
                 Text(
                   data.title,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1D2A36),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   '${data.location} - ${data.type}',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF6A7B8C),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Text(
                   '${data.slotsFilled}/${data.slotsTotal} Slots',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1D2A36),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
-                    minHeight: 8,
+                    minHeight: 6,
                     value: _progressValue,
                     backgroundColor: const Color(0xFFE8EFF7),
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(Color(0xFF1787CF)),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFF1787CF),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
-                  height: 36,
+                  height: 32,
                   child: ElevatedButton(
                     onPressed: onAnalytics,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1787CF),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     child: const Text(
@@ -476,6 +476,7 @@ class _SpotOwnerEventCard extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
+                        fontSize: 12,
                       ),
                     ),
                   ),

@@ -1,8 +1,19 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
+import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
+import 'package:xocobaby13/feature/search/presentation/routes/search_routes.dart';
 
-class FisherManHomeScreen extends StatelessWidget {
-  const FisherManHomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final PageController _liveController;
 
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -15,7 +26,52 @@ class FisherManHomeScreen extends StatelessWidget {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _liveController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _liveController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final List<_LiveEvent> liveEvents = <_LiveEvent>[
+      const _LiveEvent(
+        title: 'Crystal Lake Sanctuary',
+        location: 'Montana, USA',
+        date: 'Feb 05, 2026',
+        time: '7:00 AM - 5:00 PM',
+        hostName: 'John Mitchell',
+        rating: 4.5,
+        reviews: 18,
+        statusLabel: 'Arrived',
+        statusColor: Color(0xFF1787CF),
+        imageUrl:
+            'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80',
+        hostAvatarUrl:
+            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+      ),
+      const _LiveEvent(
+        title: 'Crystal Lake Sanctuary',
+        location: 'Montana, USA',
+        date: 'Feb 05, 2026',
+        time: '7:00 AM - 5:00 PM',
+        hostName: 'John Mitchell',
+        rating: 4.6,
+        reviews: 18,
+        statusLabel: 'Check Out',
+        statusColor: Color(0xFF111827),
+        imageUrl:
+            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=900&q=80',
+        hostAvatarUrl:
+            'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+      ),
+    ];
+
     final List<_PopularPlace> popularPlaces = <_PopularPlace>[
       const _PopularPlace(
         title: 'Crystal Lake Sanctuary',
@@ -88,10 +144,7 @@ class FisherManHomeScreen extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       'Good Morning',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF3A4A5A),
-                      ),
+                      style: TextStyle(fontSize: 14, color: Color(0xFF3A4A5A)),
                     ),
                     SizedBox(height: 2),
                     Text(
@@ -106,26 +159,73 @@ class FisherManHomeScreen extends StatelessWidget {
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: () => _showMessage(context, 'Notifications'),
+                  onTap: () => context.push(
+                    NotificationRouteNames.notifications,
+                  ),
                   child: const _NotificationBell(),
                 ),
               ],
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
             const Text(
               'Ready to fish today?',
               style: TextStyle(
-                fontSize: 30,
+                fontSize: 26,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF1D2A36),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             _SearchField(
+              onTap: () => context.push(SearchRouteNames.fishermanSearch),
               onSubmitted: (String value) =>
                   _showMessage(context, 'Searching for "$value"'),
             ),
-            const SizedBox(height: 26),
+            const SizedBox(height: 22),
+            _SectionHeader(
+              title: 'Live',
+              actionLabel: 'See all',
+              onActionTap: () => _showMessage(context, 'Live'),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 126,
+              child: PageView.builder(
+                controller: _liveController,
+                itemCount: liveEvents.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return AnimatedBuilder(
+                    animation: _liveController,
+                    child: _LiveEventCard(
+                      data: liveEvents[index],
+                      onStatusTap: () =>
+                          _showMessage(context, liveEvents[index].statusLabel),
+                    ),
+                    builder: (BuildContext context, Widget? child) {
+                      double scale = 1;
+                      double translate = 0;
+                      if (_liveController.hasClients) {
+                        final double page =
+                            _liveController.page ??
+                            _liveController.initialPage.toDouble();
+                        final double delta = (page - index).abs();
+                        scale = (1 - (delta * 0.05)).clamp(0.95, 1.0);
+                        translate = (delta * 6).clamp(0.0, 6.0);
+                      }
+                      return Transform.translate(
+                        offset: Offset(translate, 0),
+                        child: Transform.scale(
+                          scale: scale,
+                          alignment: Alignment.center,
+                          child: child,
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 18),
             _SectionHeader(
               title: 'Popular Nearby',
               actionLabel: 'See all',
@@ -141,10 +241,8 @@ class FisherManHomeScreen extends StatelessWidget {
                 itemBuilder: (BuildContext context, int index) {
                   return _PopularCard(
                     data: popularPlaces[index],
-                    onViewDetails: () => _showMessage(
-                      context,
-                      'Viewing ${popularPlaces[index].title}',
-                    ),
+                    onViewDetails: () =>
+                        context.push(HomeRouteNames.details),
                   );
                 },
               ),
@@ -161,10 +259,7 @@ class FisherManHomeScreen extends StatelessWidget {
                   .map(
                     (_RecommendedPlace place) => _RecommendedCard(
                       data: place,
-                      onTap: () => _showMessage(
-                        context,
-                        'Viewing ${place.title}',
-                      ),
+                      onTap: () => context.push(HomeRouteNames.details),
                     ),
                   )
                   .toList(),
@@ -256,42 +351,42 @@ class _NotificationBell extends StatelessWidget {
 
 class _SearchField extends StatelessWidget {
   final ValueChanged<String> onSubmitted;
+  final VoidCallback? onTap;
 
-  const _SearchField({required this.onSubmitted});
+  const _SearchField({required this.onSubmitted, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 54,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FCFF),
-        borderRadius: BorderRadius.circular(28),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
         boxShadow: const <BoxShadow>[
           BoxShadow(
             color: Color(0x1A0F172A),
-            blurRadius: 18,
+            blurRadius: 16,
             offset: Offset(0, 8),
           ),
         ],
       ),
       child: TextField(
         onSubmitted: onSubmitted,
+        onTap: onTap,
+        readOnly: onTap != null,
         decoration: const InputDecoration(
-          prefixIcon: Icon(CupertinoIcons.search, color: Color(0xFF1787CF)),
+          prefixIcon: Icon(CupertinoIcons.search, color: Color(0xFF1E7CC8)),
           hintText: 'Search',
           hintStyle: TextStyle(
-            color: Color(0xFF4E7BA3),
-            fontSize: 16,
+            color: Color(0xFF1E7CC8),
+            fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 14),
+          contentPadding: EdgeInsets.symmetric(vertical: 10),
         ),
-        style: const TextStyle(
-          color: Color(0xFF1D2A36),
-          fontSize: 16,
-        ),
+        style: const TextStyle(color: Color(0xFF1D2A36), fontSize: 14),
       ),
     );
   }
@@ -315,7 +410,7 @@ class _SectionHeader extends StatelessWidget {
         Text(
           title,
           style: const TextStyle(
-            fontSize: 22,
+            fontSize: 18,
             fontWeight: FontWeight.w700,
             color: Color(0xFF1D2A36),
           ),
@@ -326,9 +421,197 @@ class _SectionHeader extends StatelessWidget {
           child: Text(
             actionLabel,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: Color(0xFF6A7B8C),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LiveEventCard extends StatelessWidget {
+  final _LiveEvent data;
+  final VoidCallback onStatusTap;
+
+  const _LiveEventCard({required this.data, required this.onStatusTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 118,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF1787CF), width: 1.4),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(16),
+            ),
+            child: Image.network(
+              data.imageUrl,
+              width: 125,
+              height: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 98,
+                height: double.infinity,
+                color: const Color(0xFFE2E8F1),
+                child: const Icon(Icons.photo, size: 28),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    data.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1D2A36),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  _LiveMetaRow(icon: CupertinoIcons.time, text: data.time),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: _LiveMetaRow(
+                          icon: CupertinoIcons.location_solid,
+                          text: data.location,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _LiveMetaRow(
+                          icon: CupertinoIcons.calendar,
+                          text: data.date,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: <Widget>[
+                      CircleAvatar(
+                        radius: 12,
+                        backgroundImage: NetworkImage(data.hostAvatarUrl),
+                        backgroundColor: const Color(0xFFE2E8F1),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              data.hostName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1D2A36),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: <Widget>[
+                                const Icon(
+                                  CupertinoIcons.star_fill,
+                                  size: 11,
+                                  color: Color(0xFFF2B01E),
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    '${data.rating} (${data.reviews} Reviews)',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF6A7B8C),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: onStatusTap,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: data.statusColor,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            data.statusLabel,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiveMetaRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _LiveMetaRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Icon(icon, size: 11, color: const Color(0xFF6A7B8C)),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Color(0xFF6A7B8C),
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -346,7 +629,7 @@ class _PopularCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 320,
+      width: 300,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -365,11 +648,11 @@ class _PopularCard extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             child: Image.network(
               data.imageUrl,
-              height: 190,
+              height: 180,
               width: double.infinity,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
-                height: 190,
+                height: 180,
                 color: const Color(0xFFE2E8F1),
                 child: const Icon(Icons.photo, size: 40),
               ),
@@ -437,8 +720,11 @@ class _PopularCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        const Icon(CupertinoIcons.location_solid,
-                            size: 16, color: Color(0xFF3A4A5A)),
+                        const Icon(
+                          CupertinoIcons.location_solid,
+                          size: 16,
+                          color: Color(0xFF3A4A5A),
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           data.location,
@@ -452,8 +738,11 @@ class _PopularCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        const Icon(CupertinoIcons.calendar,
-                            size: 16, color: Color(0xFF3A4A5A)),
+                        const Icon(
+                          CupertinoIcons.calendar,
+                          size: 16,
+                          color: Color(0xFF3A4A5A),
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           data.date,
@@ -475,8 +764,11 @@ class _PopularCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        const Icon(CupertinoIcons.star_fill,
-                            size: 16, color: Color(0xFFF2B01E)),
+                        const Icon(
+                          CupertinoIcons.star_fill,
+                          size: 16,
+                          color: Color(0xFFF2B01E),
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           '${data.rating}',
@@ -499,8 +791,11 @@ class _PopularCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        const Icon(CupertinoIcons.time,
-                            size: 16, color: Color(0xFF1D2A36)),
+                        const Icon(
+                          CupertinoIcons.time,
+                          size: 16,
+                          color: Color(0xFF1D2A36),
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           data.timeRange,
@@ -722,8 +1017,11 @@ class _RecommendedCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          const Icon(CupertinoIcons.location_solid,
-                              size: 14, color: Color(0xFF3A4A5A)),
+                          const Icon(
+                            CupertinoIcons.location_solid,
+                            size: 14,
+                            color: Color(0xFF3A4A5A),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             data.location,
@@ -737,8 +1035,11 @@ class _RecommendedCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          const Icon(CupertinoIcons.calendar,
-                              size: 14, color: Color(0xFF3A4A5A)),
+                          const Icon(
+                            CupertinoIcons.calendar,
+                            size: 14,
+                            color: Color(0xFF3A4A5A),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             data.date,
@@ -760,8 +1061,11 @@ class _RecommendedCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          const Icon(CupertinoIcons.star_fill,
-                              size: 14, color: Color(0xFFF2B01E)),
+                          const Icon(
+                            CupertinoIcons.star_fill,
+                            size: 14,
+                            color: Color(0xFFF2B01E),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             '${data.rating}',
@@ -784,8 +1088,11 @@ class _RecommendedCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          const Icon(CupertinoIcons.time,
-                              size: 14, color: Color(0xFF1D2A36)),
+                          const Icon(
+                            CupertinoIcons.time,
+                            size: 14,
+                            color: Color(0xFF1D2A36),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             data.timeRange,
@@ -807,6 +1114,34 @@ class _RecommendedCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _LiveEvent {
+  final String title;
+  final String location;
+  final String date;
+  final String time;
+  final String hostName;
+  final double rating;
+  final int reviews;
+  final String statusLabel;
+  final Color statusColor;
+  final String imageUrl;
+  final String hostAvatarUrl;
+
+  const _LiveEvent({
+    required this.title,
+    required this.location,
+    required this.date,
+    required this.time,
+    required this.hostName,
+    required this.rating,
+    required this.reviews,
+    required this.statusLabel,
+    required this.statusColor,
+    required this.imageUrl,
+    required this.hostAvatarUrl,
+  });
 }
 
 class _PopularPlace {

@@ -23,14 +23,20 @@ class BottomNavigationBarForBaby extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
         child: Container(
-          height: 84,
+          height: 78,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: const Color(0xFFF3F3F3),
-            // color: Colors.red,
-            borderRadius: BorderRadius.circular(42),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(36),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x1A0F172A),
+                blurRadius: 18,
+                offset: Offset(0, 10),
+              ),
+            ],
           ),
           child: Row(
             children: List<Widget>.generate(_items.length, (int index) {
@@ -44,34 +50,34 @@ class BottomNavigationBarForBaby extends StatelessWidget {
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOut,
                     margin: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 5,
+                      vertical: 10,
+                      horizontal: 6,
                     ),
                     decoration: BoxDecoration(
                       color: selected
                           ? const Color(0xFF1787CF)
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(34),
+                      borderRadius: BorderRadius.circular(24),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
                         Icon(
                           item.icon,
-                          size: 24,
+                          size: 22,
                           color: selected
                               ? Colors.white
                               : const Color(0xFF131619),
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 4),
                         Text(
                           item.label,
                           style: TextStyle(
                             color: selected
                                 ? Colors.white
                                 : const Color(0xFF131619),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
