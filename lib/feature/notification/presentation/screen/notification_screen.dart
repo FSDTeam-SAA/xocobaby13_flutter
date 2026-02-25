@@ -139,20 +139,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ),
                 ),
               ),
-              SafeArea(
-                top: false,
-                child: _isSpotOwner
-                    ? BottomNavigationBarForSpotOwner(
-                        selectedIndex:
-                            NavigationController.instance().selectedTabIndex.value,
-                        onItemTapped: _handleTabTap,
-                      )
-                    : BottomNavigationBarForBaby(
-                        selectedIndex:
-                            NavigationController.instance().selectedTabIndex.value,
-                        onItemTapped: _handleTabTap,
-                      ),
-              ),
+              const SizedBox.shrink(),
             ],
           ),
         ),
