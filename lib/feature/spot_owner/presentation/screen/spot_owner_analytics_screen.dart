@@ -73,62 +73,62 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Image.network(
                     'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
-                    height: 180,
+                    height: 170,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
-                      height: 180,
+                      height: 170,
                       color: const Color(0xFFE2E8F1),
                       child: const Icon(Icons.photo, size: 36),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 const Text(
                   'Crystal Lake Sanctuary',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1D2A36),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 const Row(
                   children: <Widget>[
                     Icon(
                       CupertinoIcons.location_solid,
-                      size: 13,
+                      size: 12,
                       color: Color(0xFF3A4A5A),
                     ),
                     SizedBox(width: 6),
                     Text(
                       'Montana, USA',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: Color(0xFF3A4A5A),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 const Text(
                   'Activity',
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                     color: Color(0xFF1D2A36),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
@@ -147,7 +147,7 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                       Text(
                         'Available Slots',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           color: Color(0xFF6A7B8C),
                           fontWeight: FontWeight.w500,
                         ),
@@ -156,7 +156,7 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                       Text(
                         '40',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF1D2A36),
                         ),
@@ -164,16 +164,16 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 const Text(
                   'Overview',
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                     color: Color(0xFF1D2A36),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Row(
                   children: const <Widget>[
                     Expanded(
@@ -207,14 +207,14 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 Row(
                   children: <Widget>[
                     const Text(
                       'Bookings',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                         color: Color(0xFF1D2A36),
                       ),
                     ),
@@ -224,7 +224,7 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                       child: const Text(
                         'See All',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF1E7CC8),
                         ),
@@ -255,8 +255,8 @@ class _ActivityIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 44,
-      height: 44,
+      width: 40,
+      height: 40,
       decoration: const BoxDecoration(
         color: Color(0xFFE7F2FF),
         shape: BoxShape.circle,
@@ -265,7 +265,7 @@ class _ActivityIcon extends StatelessWidget {
         child: Icon(
           CupertinoIcons.ticket,
           color: Color(0xFF1E7CC8),
-          size: 20,
+          size: 18,
         ),
       ),
     );
@@ -290,8 +290,8 @@ class _OverviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 90,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      height: 84,
+      padding: const EdgeInsets.fromLTRB(8, 9, 8, 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -306,29 +306,31 @@ class _OverviewCard extends StatelessWidget {
       child: Column(
         children: <Widget>[
           Container(
-            width: 32,
-            height: 32,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
               color: iconBg,
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 16),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             label,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 10,
+              fontSize: 9,
               color: Color(0xFF6A7B8C),
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               color: Color(0xFF1D2A36),
             ),
@@ -348,17 +350,10 @@ class _BookingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x120F172A),
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: <Widget>[
@@ -380,14 +375,16 @@ class _BookingRow extends StatelessWidget {
                     color: Color(0xFF1D2A36),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   item.subtitle,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: Color(0xFF6A7B8C),
                     fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
