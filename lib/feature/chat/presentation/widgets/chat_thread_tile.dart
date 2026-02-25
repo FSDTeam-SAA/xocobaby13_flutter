@@ -45,7 +45,7 @@ class ChatThreadTile extends StatelessWidget {
                     thread.name,
                     style: const TextStyle(
                       color: ChatPalette.titleText,
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -56,7 +56,7 @@ class ChatThreadTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: ChatPalette.subtitleText,
-                      fontSize: 11,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -68,7 +68,7 @@ class ChatThreadTile extends StatelessWidget {
               thread.lastMessageTime.toChatTimeString().toLowerCase(),
               style: const TextStyle(
                 color: ChatPalette.subtitleText,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
