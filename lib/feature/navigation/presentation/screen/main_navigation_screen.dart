@@ -6,7 +6,7 @@ import 'package:xocobaby13/feature/navigation/controller/navigation_controller.d
 import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_navigation_bar_for_baby.dart';
 import 'package:xocobaby13/feature/chat/presentation/screen/chat_list_screen.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
-import 'package:xocobaby13/feature/profile/presentation/screen/profile_screen.dart';
+import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_profile_screen.dart';
 
 class MainNavigationScreen extends StatelessWidget {
   const MainNavigationScreen({super.key});
@@ -38,7 +38,7 @@ class MainNavigationScreen extends StatelessWidget {
               FisherManHomeScreen(),
               _TabPlaceholder(label: 'Bookings', icon: CupertinoIcons.calendar),
               ChatListScreen(),
-              ProfileScreen(),
+              FishermanProfileScreen(),
             ],
           ),
         ),

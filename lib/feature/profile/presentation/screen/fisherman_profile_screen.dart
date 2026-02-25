@@ -6,8 +6,8 @@ import 'package:xocobaby13/feature/profile/presentation/routes/profile_routes.da
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_action_card.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_avatar.dart';
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class FishermanProfileScreen extends StatelessWidget {
+  const FishermanProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
