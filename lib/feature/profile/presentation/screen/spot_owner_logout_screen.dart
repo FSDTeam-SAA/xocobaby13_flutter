@@ -6,16 +6,16 @@ import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
 import 'package:xocobaby13/feature/auth/interface/auth_interface.dart';
 import 'package:xocobaby13/feature/auth/model/logout_request_model.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
-import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
+import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_style.dart';
 
-class LogoutScreen extends StatefulWidget {
-  const LogoutScreen({super.key});
+class SpotOwnerLogoutScreen extends StatefulWidget {
+  const SpotOwnerLogoutScreen({super.key});
 
   @override
-  State<LogoutScreen> createState() => _LogoutScreenState();
+  State<SpotOwnerLogoutScreen> createState() => _SpotOwnerLogoutScreenState();
 }
 
-class _LogoutScreenState extends State<LogoutScreen> {
+class _SpotOwnerLogoutScreenState extends State<SpotOwnerLogoutScreen> {
   bool _isLoading = false;
 
   Future<void> _handleLogout() async {
@@ -23,7 +23,8 @@ class _LogoutScreenState extends State<LogoutScreen> {
     setState(() => _isLoading = true);
 
     final snackbarNotifier = SnackbarNotifier(context: context);
-    final authRecord = await Get.find<AuthorizedPigeon>().getCurrentAuthRecord();
+    final authRecord = await Get.find<AuthorizedPigeon>()
+        .getCurrentAuthRecord();
     final refreshToken =
         authRecord?.toJson()['refresh_token']?.toString() ?? '';
 
@@ -31,13 +32,10 @@ class _LogoutScreenState extends State<LogoutScreen> {
       param: LogoutRequestModel(refreshToken: refreshToken),
     );
 
-    result.fold(
-      (failure) {
-        snackbarNotifier.notifyError(message: failure.uiMessage);
-        context.go(AuthRouteNames.login);
-      },
-      (_) => context.go(AuthRouteNames.login),
-    );
+    result.fold((failure) {
+      snackbarNotifier.notifyError(message: failure.uiMessage);
+      context.go(AuthRouteNames.login);
+    }, (_) => context.go(AuthRouteNames.login));
 
     if (mounted) {
       setState(() => _isLoading = false);
@@ -47,19 +45,19 @@ class _LogoutScreenState extends State<LogoutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: ProfileGradientBackground(
+      body: SpotOwnerGradientBackground(
         child: SafeArea(
           child: Center(
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: <BoxShadow>[
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 16,
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 18,
                     offset: const Offset(0, 8),
                   ),
                 ],
@@ -71,9 +69,9 @@ class _LogoutScreenState extends State<LogoutScreen> {
                     'Are you sure you want to Log out',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF111418),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: SpotOwnerProfilePalette.darkText,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -81,67 +79,68 @@ class _LogoutScreenState extends State<LogoutScreen> {
                     'Tap log out to Log out from this app.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF6B7280),
-                      fontWeight: FontWeight.w500,
+                      fontSize: 10,
+                      color: SpotOwnerProfilePalette.mutedText,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
                   Row(
                     children: <Widget>[
                       Expanded(
                         child: SizedBox(
-                          height: 50,
+                          height: 34,
                           child: ElevatedButton(
                             onPressed: () => context.pop(),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE5E5E5),
-                              foregroundColor: const Color(0xFF111418),
+                              backgroundColor: const Color(0xFFE8EAEE),
+                              foregroundColor: SpotOwnerProfilePalette.darkText,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                             child: const Text(
                               'Cancel',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: SizedBox(
-                          height: 50,
+                          height: 34,
                           child: ElevatedButton.icon(
                             onPressed: _isLoading ? null : _handleLogout,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFD70000),
+                              backgroundColor:
+                                  SpotOwnerProfilePalette.dangerRed,
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                             icon: _isLoading
                                 ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
+                                    width: 14,
+                                    height: 14,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2,
+                                      strokeWidth: 1.6,
                                       valueColor: AlwaysStoppedAnimation<Color>(
                                         Colors.white,
                                       ),
                                     ),
                                   )
-                                : const Icon(Icons.logout, size: 20),
+                                : const Icon(Icons.logout, size: 14),
                             label: Text(
                               _isLoading ? 'Logging out...' : 'Log out',
                               style: const TextStyle(
-                                fontSize: 18,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

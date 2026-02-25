@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_text_field.dart';
 
-class UpdatePasswordScreen extends StatefulWidget {
-  const UpdatePasswordScreen({super.key});
+class FishermanUpdatePasswordScreen extends StatefulWidget {
+  const FishermanUpdatePasswordScreen({super.key});
 
   @override
-  State<UpdatePasswordScreen> createState() => _UpdatePasswordScreenState();
+  State<FishermanUpdatePasswordScreen> createState() =>
+      _FishermanUpdatePasswordScreenState();
 }
 
-class _UpdatePasswordScreenState extends State<UpdatePasswordScreen> {
+class _FishermanUpdatePasswordScreenState
+    extends State<FishermanUpdatePasswordScreen> {
   final TextEditingController _currentController = TextEditingController();
   final TextEditingController _newController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();

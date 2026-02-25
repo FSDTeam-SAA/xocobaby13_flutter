@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/app/routes/auth_router_notifier.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
+import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
 import 'package:xocobaby13/feature/profile/presentation/routes/profile_routes.dart';
 import 'package:xocobaby13/feature/search/presentation/routes/search_routes.dart';
 import 'package:xocobaby13/feature/spot_owner/presentation/routes/spot_owner_routes.dart';
+import 'package:xocobaby13/feature/profile/presentation/routes/spot_owner_profile_routes.dart';
 
 class AppRouter {
   const AppRouter._();
@@ -56,11 +58,13 @@ class AppRouter {
     routes: <RouteBase>[
       ...AuthRoutes.routes,
       ...HomeRoutes.routes,
+      ...ChatRoutes.routes,
       ...NavigationRoutes.routes,
       ...NotificationRoutes.routes,
       ...SearchRoutes.routes,
       ...SpotOwnerRoutes.routes,
       ...ProfileRoutes.routes,
+      ...SpotOwnerProfileRoutes.routes,
     ],
   );
 
