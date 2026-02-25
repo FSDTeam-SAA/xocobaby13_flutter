@@ -5,7 +5,8 @@ import 'package:xocobaby13/feature/home/presentation/screen/spot_owner_home_scre
 import 'package:xocobaby13/feature/navigation/controller/navigation_controller.dart';
 import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_navigation_bar_for_spot_owner.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
-import 'package:xocobaby13/feature/profile/presentation/screen/profile_screen.dart';
+import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_profile_screen.dart';
+import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_style.dart';
 
 class SpotOwnerNavigationScreen extends StatelessWidget {
   const SpotOwnerNavigationScreen({super.key});
@@ -28,7 +29,10 @@ class SpotOwnerNavigationScreen extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: <Color>[Color(0xFFD7E7F7), Color(0xFFE2E8F1)],
+              colors: <Color>[
+                SpotOwnerProfilePalette.backgroundTop,
+                SpotOwnerProfilePalette.backgroundBottom,
+              ],
             ),
           ),
           child: IndexedStack(
@@ -37,7 +41,7 @@ class SpotOwnerNavigationScreen extends StatelessWidget {
               SpotOwnerHomeScreen(),
               _TabPlaceholder(label: 'Events', icon: CupertinoIcons.calendar),
               _TabPlaceholder(label: 'Chat', icon: CupertinoIcons.chat_bubble),
-              ProfileScreen(),
+              SpotOwnerProfileScreen(),
             ],
           ),
         ),

@@ -7,8 +7,8 @@ import 'package:xocobaby13/feature/profile/presentation/widgets/profile_avatar.d
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/settings_menu_tile.dart';
 
-class EditProfileScreen extends StatelessWidget {
-  const EditProfileScreen({super.key});
+class FishermanEditProfileScreen extends StatelessWidget {
+  const FishermanEditProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

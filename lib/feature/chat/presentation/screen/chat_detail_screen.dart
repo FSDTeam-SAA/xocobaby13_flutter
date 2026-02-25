@@ -119,7 +119,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
         CircleAvatar(
-          radius: 10,
+          radius: 8,
           backgroundColor: widget.thread.avatarColor,
           backgroundImage: widget.thread.avatarAssetPath.isNotEmpty
               ? AssetImage(widget.thread.avatarAssetPath)
@@ -158,13 +158,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     constraints: const BoxConstraints(),
                     icon: const Icon(
                       Icons.arrow_back_ios_new,
-                      size: 14,
+                      size: 20,
                       color: ChatPalette.titleText,
                     ),
                   ),
                   const SizedBox(width: 8),
                   CircleAvatar(
-                    radius: 14,
+                    radius: 16,
                     backgroundColor: widget.thread.avatarColor,
                     backgroundImage: widget.thread.avatarAssetPath.isNotEmpty
                         ? AssetImage(widget.thread.avatarAssetPath)
@@ -180,7 +180,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           )
                         : null,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,7 +190,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           style: const TextStyle(
                             color: ChatPalette.titleText,
                             fontSize: 14,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -252,7 +252,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     icon: const Icon(
                       Icons.more_vert,
                       color: ChatPalette.titleText,
-                      size: 18,
+                      size: 24,
+                      weight: 100,
                     ),
                   ),
                 ],

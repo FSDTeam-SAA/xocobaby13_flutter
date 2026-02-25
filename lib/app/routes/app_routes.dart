@@ -6,6 +6,7 @@ import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
 import 'package:xocobaby13/feature/profile/presentation/routes/profile_routes.dart';
+import 'package:xocobaby13/feature/profile/presentation/routes/spot_owner_profile_routes.dart';
 
 class AppRouter {
   const AppRouter._();
@@ -55,6 +56,7 @@ class AppRouter {
       ...ChatRoutes.routes,
       ...NavigationRoutes.routes,
       ...ProfileRoutes.routes,
+      ...SpotOwnerProfileRoutes.routes,
     ],
   );
 

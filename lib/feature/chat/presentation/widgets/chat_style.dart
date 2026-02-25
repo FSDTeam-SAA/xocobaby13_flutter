@@ -5,7 +5,7 @@ class ChatPalette {
 
   static const Color surface = Colors.white;
   static const Color titleText = Color(0xFF1E2530);
-  static const Color subtitleText = Color(0xFF9AA0A6);
+  static const Color subtitleText = Color(0xFF6C6C6C);
   static const Color bodyText = Color(0xFF6C6C6C);
   static const Color searchFill = Color(0xFFF2F2F2);
   static const Color searchHint = Color(0xFF9CA3AF);
