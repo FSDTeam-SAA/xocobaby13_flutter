@@ -34,7 +34,7 @@ class MainNavigationScreen extends StatelessWidget {
           child: IndexedStack(
             index: navigationController.selectedTabIndex.value,
             children: const <Widget>[
-              FisherManHomeScreen(),
+              HomeScreen(),
               _TabPlaceholder(label: 'Bookings', icon: CupertinoIcons.calendar),
               _TabPlaceholder(label: 'Chat', icon: CupertinoIcons.chat_bubble),
               ProfileScreen(),
