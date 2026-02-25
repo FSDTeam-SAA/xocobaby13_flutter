@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:xocobaby13/feature/chat/model/chat_message_model.dart';
 import 'package:xocobaby13/feature/chat/model/chat_sample_data.dart';
 import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
@@ -251,13 +250,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           ),
                         ],
                     icon: const Icon(
-                      Symbols.more_vert,
+                      Icons.more_vert,
                       color: ChatPalette.titleText,
-                      size: 26,
-                      weight: 300,
-                      grade: -25,
-                      opticalSize: 20,
-                      fill: 0,
+                      size: 24,
+                      weight: 100,
                     ),
                   ),
                 ],
