@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class FisherManHomeScreen extends StatelessWidget {
+  const FisherManHomeScreen({super.key});
 
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
