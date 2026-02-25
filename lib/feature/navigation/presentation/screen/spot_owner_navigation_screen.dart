@@ -1,15 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xocobaby13/feature/home/presentation/screen/home_screen.dart';
+import 'package:xocobaby13/feature/home/presentation/screen/spot_owner_home_screen.dart';
 import 'package:xocobaby13/feature/navigation/controller/navigation_controller.dart';
-import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_navigation_bar_for_baby.dart';
-import 'package:xocobaby13/feature/chat/presentation/screen/chat_list_screen.dart';
+import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_navigation_bar_for_spot_owner.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/profile_screen.dart';
 
-class MainNavigationScreen extends StatelessWidget {
-  const MainNavigationScreen({super.key});
+class SpotOwnerNavigationScreen extends StatelessWidget {
+  const SpotOwnerNavigationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -35,14 +34,14 @@ class MainNavigationScreen extends StatelessWidget {
           child: IndexedStack(
             index: navigationController.selectedTabIndex.value,
             children: const <Widget>[
-              FisherManHomeScreen(),
-              _TabPlaceholder(label: 'Bookings', icon: CupertinoIcons.calendar),
-              ChatListScreen(),
+              SpotOwnerHomeScreen(),
+              _TabPlaceholder(label: 'Events', icon: CupertinoIcons.calendar),
+              _TabPlaceholder(label: 'Chat', icon: CupertinoIcons.chat_bubble),
               ProfileScreen(),
             ],
           ),
         ),
-        bottomNavigationBar: BottomNavigationBarForBaby(
+        bottomNavigationBar: BottomNavigationBarForSpotOwner(
           selectedIndex: navigationController.selectedTabIndex.value,
           onItemTapped: navigationController.setTabIndex,
         ),

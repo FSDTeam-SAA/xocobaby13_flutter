@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:app_pigeon/app_pigeon.dart';
 import 'package:go_router/go_router.dart';
+import 'package:get/get.dart';
 import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
+import 'package:xocobaby13/feature/auth/controller/login_controller.dart';
+import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
+import 'package:xocobaby13/core/notifiers/button_status_notifier.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,24 +20,66 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  late final LoginsScreenController _loginController;
 
   bool _rememberMe = false;
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    _loginController = LoginsScreenController(
+      SnackbarNotifier(context: context),
+    );
+    _loginController.processStatusNotifier.addListener(_onStatusChanged);
+    _loginController.addListener(_onStatusChanged);
+  }
+
+  void _onStatusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
+    _loginController.processStatusNotifier.removeListener(_onStatusChanged);
+    _loginController.removeListener(_onStatusChanged);
+    _loginController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     FocusScope.of(context).unfocus();
-    context.go(NavigationRouteNames.main);
+    final didLogin = await _loginController.login(
+      needVerification: () {
+        context.push(
+          AuthRouteNames.otpVerify,
+          extra: <String, String>{'email': _emailController.text.trim()},
+        );
+      },
+    );
+    if (didLogin && mounted) {
+      final authRecord =
+          await Get.find<AuthorizedPigeon>().getCurrentAuthRecord();
+      final rawRole = (authRecord?.data['role'] ?? '').toString().trim();
+      final normalizedRole =
+          rawRole.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+      if (normalizedRole == 'spotowner') {
+        context.go(NavigationRouteNames.spotOwnerMain);
+      } else {
+        context.go(NavigationRouteNames.main);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLoading =
+        _loginController.processStatusNotifier.status is LoadingStatus;
+    final canSubmit = _loginController.canSubmit && !isLoading;
     return AuthScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -80,6 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
             hint: 'you@gmail.com',
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            onChanged: (value) => _loginController.email = value,
           ),
           const SizedBox(height: 20),
           AuthInputField(
@@ -87,6 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
             hint: '••••••',
             controller: _passwordController,
             obscureText: _obscurePassword,
+            onChanged: (value) => _loginController.password = value,
             suffixIcon: IconButton(
               onPressed: () {
                 setState(() => _obscurePassword = !_obscurePassword);
@@ -164,7 +213,8 @@ class _LoginScreenState extends State<LoginScreen> {
           AuthPrimaryButton(
             title: 'Sign in',
             icon: Icons.login_rounded,
-            onTap: _submit,
+            onTap: canSubmit ? _submit : null,
+            loading: isLoading,
           ),
         ],
       ),

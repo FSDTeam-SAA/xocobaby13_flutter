@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
+import 'package:xocobaby13/feature/auth/controller/reset_password_controller.dart';
+import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
+import 'package:xocobaby13/core/notifiers/button_status_notifier.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -18,12 +21,35 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
+  late final ResetPasswordController _controller;
+  late final SnackbarNotifier _snackbarNotifier;
 
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
 
   @override
+  void initState() {
+    super.initState();
+    _snackbarNotifier = SnackbarNotifier(context: context);
+    _controller = ResetPasswordController(_snackbarNotifier);
+    _controller
+      ..email = widget.email
+      ..otp = widget.otp;
+    _controller.processStatusNotifier.addListener(_onStatusChanged);
+    _controller.addListener(_onStatusChanged);
+  }
+
+  void _onStatusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
+    _controller.processStatusNotifier.removeListener(_onStatusChanged);
+    _controller.removeListener(_onStatusChanged);
+    _controller.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -31,11 +57,28 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   void _submit() {
     FocusScope.of(context).unfocus();
-    context.go(AuthRouteNames.login);
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _snackbarNotifier.notifyError(
+        message: 'Passwords do not match. Please try again.',
+      );
+      return;
+    }
+    _controller.resetPassword(
+      onSuccess: () => context.go(AuthRouteNames.login),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLoading =
+        _controller.processStatusNotifier.status is LoadingStatus;
+    final passwordText = _passwordController.text;
+    final confirmText = _confirmPasswordController.text;
+    final canSubmit =
+        passwordText.isNotEmpty &&
+        confirmText.isNotEmpty &&
+        passwordText == confirmText &&
+        !isLoading;
     return AuthScaffold(
       appTitle: 'The Bob App',
       showBack: true,
@@ -61,6 +104,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             hint: '••••••',
             controller: _passwordController,
             obscureText: _obscurePassword,
+            onChanged: (value) {
+              _controller.password = value;
+              setState(() {});
+            },
             suffixIcon: IconButton(
               onPressed: () {
                 setState(() => _obscurePassword = !_obscurePassword);
@@ -79,6 +126,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             hint: '••••••',
             controller: _confirmPasswordController,
             obscureText: _obscureConfirm,
+            onChanged: (value) {
+              _controller.confirmPassword = value;
+              setState(() {});
+            },
             suffixIcon: IconButton(
               onPressed: () {
                 setState(() => _obscureConfirm = !_obscureConfirm);
@@ -92,7 +143,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             ),
           ),
           const SizedBox(height: 22),
-          AuthPrimaryButton(title: 'Update Password', onTap: _submit),
+          AuthPrimaryButton(
+            title: 'Update Password',
+            onTap: canSubmit ? _submit : null,
+            loading: isLoading,
+          ),
         ],
       ),
     );
