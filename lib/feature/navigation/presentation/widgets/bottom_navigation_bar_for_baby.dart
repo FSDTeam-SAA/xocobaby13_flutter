@@ -25,11 +25,11 @@ class BottomNavigationBarForBaby extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
         child: Container(
-          height: 78,
+          height: 70,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(36),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: const <BoxShadow>[
               BoxShadow(
                 color: Color(0x1A0F172A),
@@ -57,7 +57,7 @@ class BottomNavigationBarForBaby extends StatelessWidget {
                       color: selected
                           ? const Color(0xFF1787CF)
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
