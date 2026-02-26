@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:xocobaby13/feature/chat/presentation/screen/chat_list_screen.dart';
 import 'package:xocobaby13/feature/home/presentation/screen/spot_owner_home_screen.dart';
 import 'package:xocobaby13/feature/navigation/controller/navigation_controller.dart';
 import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_navigation_bar_for_spot_owner.dart';
@@ -40,7 +41,7 @@ class SpotOwnerNavigationScreen extends StatelessWidget {
             children: const <Widget>[
               SpotOwnerHomeScreen(),
               SpotOwnerEventsScreen(),
-              _TabPlaceholder(label: 'Chat', icon: Icons.chat_bubble_outline),
+              ChatListScreen(),
               SpotOwnerProfileScreen(),
             ],
           ),
@@ -48,36 +49,6 @@ class SpotOwnerNavigationScreen extends StatelessWidget {
         bottomNavigationBar: BottomNavigationBarForSpotOwner(
           selectedIndex: navigationController.selectedTabIndex.value,
           onItemTapped: navigationController.setTabIndex,
-        ),
-      ),
-    );
-  }
-}
-
-class _TabPlaceholder extends StatelessWidget {
-  final String label;
-  final IconData icon;
-
-  const _TabPlaceholder({required this.label, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(icon, size: 42, color: const Color(0xFF1787CF)),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF23303D),
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ),
       ),
     );
