@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xocobaby13/feature/home/presentation/screen/spot_owner_home_screen.dart';
@@ -7,6 +6,7 @@ import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_naviga
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_profile_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_style.dart';
+import 'package:xocobaby13/feature/spot_owner/presentation/screen/spot_owner_events_screen.dart';
 
 class SpotOwnerNavigationScreen extends StatelessWidget {
   const SpotOwnerNavigationScreen({super.key});
@@ -39,8 +39,8 @@ class SpotOwnerNavigationScreen extends StatelessWidget {
             index: navigationController.selectedTabIndex.value,
             children: const <Widget>[
               SpotOwnerHomeScreen(),
-              _TabPlaceholder(label: 'Events', icon: CupertinoIcons.calendar),
-              _TabPlaceholder(label: 'Chat', icon: CupertinoIcons.chat_bubble),
+              SpotOwnerEventsScreen(),
+              _TabPlaceholder(label: 'Chat', icon: Icons.chat_bubble_outline),
               SpotOwnerProfileScreen(),
             ],
           ),

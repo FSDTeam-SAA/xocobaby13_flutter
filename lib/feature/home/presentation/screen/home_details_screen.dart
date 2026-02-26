@@ -8,8 +8,13 @@ import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 
 class HomeDetailsScreen extends StatefulWidget {
   final bool isBooked;
+  final bool showBookingButton;
 
-  const HomeDetailsScreen({super.key, this.isBooked = false});
+  const HomeDetailsScreen({
+    super.key,
+    this.isBooked = false,
+    this.showBookingButton = true,
+  });
 
   @override
   State<HomeDetailsScreen> createState() => _HomeDetailsScreenState();
@@ -821,37 +826,38 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                 ),
               ),
             ),
-            SafeArea(
-              top: false,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-                color: const Color(0xFFF2F9FF),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _isBooked
-                        ? _openCancellationSheet
-                        : () => context.push(HomeRouteNames.payment),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1787CF),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+            if (widget.showBookingButton)
+              SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                  color: const Color(0xFFF2F9FF),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _isBooked
+                          ? _openCancellationSheet
+                          : () => context.push(HomeRouteNames.payment),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1787CF),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      _isBooked ? 'Cancel & Refund' : 'Book Now',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                      child: Text(
+                        _isBooked ? 'Cancel & Refund' : 'Book Now',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
