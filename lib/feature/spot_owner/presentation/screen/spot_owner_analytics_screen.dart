@@ -78,7 +78,7 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   child: Image.network(
                     'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
-                    height: 170,
+                    height: 300,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
@@ -92,7 +92,7 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                 const Text(
                   'Crystal Lake Sanctuary',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1D2A36),
                   ),
@@ -109,7 +109,7 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                     Text(
                       'Montana, USA',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 14,
                         color: Color(0xFF3A4A5A),
                         fontWeight: FontWeight.w500,
                       ),
@@ -142,7 +142,9 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                   ),
                   child: Column(
                     children: const <Widget>[
-                      _ActivityIcon(),
+                      _ActivityIcon(
+                        assetPath: 'assets/icons/clipboard-edit.png',
+                      ),
                       SizedBox(height: 6),
                       Text(
                         'Available Slots',
@@ -178,9 +180,8 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                   children: const <Widget>[
                     Expanded(
                       child: _OverviewCard(
-                        icon: CupertinoIcons.calendar,
+                        assetPath: 'assets/icons/clipboard-check.png',
                         iconBg: Color(0xFFE7F2FF),
-                        iconColor: Color(0xFF1E7CC8),
                         label: 'Today Booking',
                         value: '30',
                       ),
@@ -198,9 +199,8 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                     SizedBox(width: 10),
                     Expanded(
                       child: _OverviewCard(
-                        icon: CupertinoIcons.money_dollar,
+                        assetPath: 'assets/icons/coins.png',
                         iconBg: Color(0xFFDFF8E9),
-                        iconColor: Color(0xFF26A764),
                         label: 'Total Earning',
                         value: r'$12.26K',
                       ),
@@ -235,9 +235,7 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Column(
                   children: bookings
-                      .map(
-                        (_BookingItem item) => _BookingRow(item: item),
-                      )
+                      .map((_BookingItem item) => _BookingRow(item: item))
                       .toList(),
                 ),
               ],
@@ -250,7 +248,9 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
 }
 
 class _ActivityIcon extends StatelessWidget {
-  const _ActivityIcon();
+  final String assetPath;
+
+  const _ActivityIcon({required this.assetPath});
 
   @override
   Widget build(BuildContext context) {
@@ -261,11 +261,17 @@ class _ActivityIcon extends StatelessWidget {
         color: Color(0xFFE7F2FF),
         shape: BoxShape.circle,
       ),
-      child: const Center(
-        child: Icon(
-          CupertinoIcons.ticket,
-          color: Color(0xFF1E7CC8),
-          size: 18,
+      child: Center(
+        child: Image.asset(
+          assetPath,
+          width: 24,
+          height: 24,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const Icon(
+            CupertinoIcons.ticket,
+            color: Color(0xFF1E7CC8),
+            size: 18,
+          ),
         ),
       ),
     );
@@ -273,19 +279,21 @@ class _ActivityIcon extends StatelessWidget {
 }
 
 class _OverviewCard extends StatelessWidget {
-  final IconData icon;
   final Color iconBg;
   final Color iconColor;
+  final IconData? icon;
+  final String? assetPath;
   final String label;
   final String value;
 
   const _OverviewCard({
-    required this.icon,
     required this.iconBg,
-    required this.iconColor,
+    this.iconColor = const Color(0xFF1E7CC8),
+    this.icon,
+    this.assetPath,
     required this.label,
     required this.value,
-  });
+  }) : assert(icon != null || assetPath != null);
 
   @override
   Widget build(BuildContext context) {
@@ -306,13 +314,24 @@ class _OverviewCard extends StatelessWidget {
       child: Column(
         children: <Widget>[
           Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: iconBg,
-              shape: BoxShape.circle,
+            width: 33,
+            height: 33,
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+            child: Center(
+              child: assetPath != null
+                  ? Image.asset(
+                      assetPath!,
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Icon(
+                        icon ?? CupertinoIcons.square_stack_3d_up,
+                        color: iconColor,
+                        size: 16,
+                      ),
+                    )
+                  : Icon(icon, color: iconColor, size: 24),
             ),
-            child: Icon(icon, color: iconColor, size: 16),
           ),
           const SizedBox(height: 4),
           Text(
@@ -352,13 +371,13 @@ class _BookingRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: <Widget>[
           CircleAvatar(
-            radius: 20,
+            radius: 29,
             backgroundImage: NetworkImage(item.avatarUrl),
             backgroundColor: const Color(0xFFE2E8F1),
           ),
@@ -370,7 +389,7 @@ class _BookingRow extends StatelessWidget {
                 Text(
                   item.name,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1D2A36),
                   ),

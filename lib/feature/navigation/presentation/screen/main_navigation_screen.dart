@@ -1,10 +1,10 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:xocobaby13/feature/chat/presentation/screen/chat_list_screen.dart';
 import 'package:xocobaby13/feature/home/presentation/screen/home_screen.dart';
 import 'package:xocobaby13/feature/navigation/controller/navigation_controller.dart';
 import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_navigation_bar_for_baby.dart';
-import 'package:xocobaby13/feature/chat/presentation/screen/chat_list_screen.dart';
+import 'package:xocobaby13/feature/profile/presentation/screen/activity_screen.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_profile_screen.dart';
 
@@ -36,7 +36,11 @@ class MainNavigationScreen extends StatelessWidget {
             index: navigationController.selectedTabIndex.value,
             children: const <Widget>[
               HomeScreen(),
-              _TabPlaceholder(label: 'Bookings', icon: CupertinoIcons.calendar),
+              ActivityScreen(
+                embedded: true,
+                showBack: false,
+                useDetailsRoute: true,
+              ),
               ChatListScreen(),
               FishermanProfileScreen(),
             ],
@@ -45,36 +49,6 @@ class MainNavigationScreen extends StatelessWidget {
         bottomNavigationBar: BottomNavigationBarForBaby(
           selectedIndex: navigationController.selectedTabIndex.value,
           onItemTapped: navigationController.setTabIndex,
-        ),
-      ),
-    );
-  }
-}
-
-class _TabPlaceholder extends StatelessWidget {
-  final String label;
-  final IconData icon;
-
-  const _TabPlaceholder({required this.label, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(icon, size: 42, color: const Color(0xFF1787CF)),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF23303D),
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ),
       ),
     );

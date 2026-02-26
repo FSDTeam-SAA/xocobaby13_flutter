@@ -24,7 +24,8 @@ class ProfileController extends GetxController {
       reviewer: 'John Mitchell',
       rating: 4.5,
       status: ActivityStatusModel.ongoing,
-      imagePath: 'assets/onboarding/rectangle_3463712.png',
+      imagePath:
+          'https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1200&q=80',
     ),
     ActivityItemModel(
       title: 'Crystal Lake Sanctuary',
@@ -32,7 +33,8 @@ class ProfileController extends GetxController {
       reviewer: 'John Mitchell',
       rating: 4.5,
       status: ActivityStatusModel.ongoing,
-      imagePath: 'assets/onboarding/rectangle_3463713.png',
+      imagePath:
+          'https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=1200&q=80',
     ),
     ActivityItemModel(
       title: 'Crystal Lake Sanctuary',
@@ -40,7 +42,8 @@ class ProfileController extends GetxController {
       reviewer: 'John Mitchell',
       rating: 4.5,
       status: ActivityStatusModel.ongoing,
-      imagePath: 'assets/onboarding/rectangle_3463712.png',
+      imagePath:
+          'https://images.unsplash.com/photo-1439066615861-d1af74d74000?auto=format&fit=crop&w=1200&q=80',
     ),
     ActivityItemModel(
       title: 'Crystal Lake Sanctuary',
@@ -48,7 +51,8 @@ class ProfileController extends GetxController {
       reviewer: 'John Mitchell',
       rating: 4.5,
       status: ActivityStatusModel.upcoming,
-      imagePath: 'assets/onboarding/rectangle_3463712.png',
+      imagePath:
+          'https://images.unsplash.com/photo-1516939884455-1445c8652f83?auto=format&fit=crop&w=1200&q=80',
     ),
     ActivityItemModel(
       title: 'Crystal Lake Sanctuary',
@@ -56,7 +60,8 @@ class ProfileController extends GetxController {
       reviewer: 'John Mitchell',
       rating: 4.5,
       status: ActivityStatusModel.upcoming,
-      imagePath: 'assets/onboarding/rectangle_3463713.png',
+      imagePath:
+          'https://images.unsplash.com/photo-1508261303786-8f0679f9f359?auto=format&fit=crop&w=1200&q=80',
     ),
     ActivityItemModel(
       title: 'Crystal Lake Sanctuary',
@@ -64,7 +69,8 @@ class ProfileController extends GetxController {
       reviewer: 'John Mitchell',
       rating: 4.5,
       status: ActivityStatusModel.completed,
-      imagePath: 'assets/onboarding/rectangle_3463713.png',
+      imagePath:
+          'https://images.unsplash.com/photo-1488127339777-183f1fb7f3d5?auto=format&fit=crop&w=1200&q=80',
     ),
   ];
 
