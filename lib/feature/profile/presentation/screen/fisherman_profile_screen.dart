@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:get/get.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/presentation/routes/profile_routes.dart';
+import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_logout_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_action_card.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_avatar.dart';
 
@@ -59,7 +60,11 @@ class FishermanProfileScreen extends StatelessWidget {
               ProfileActionCard(
                 icon: Icons.logout_rounded,
                 label: 'Log Out',
-                onTap: () => context.push(ProfileRouteNames.logout),
+                onTap: () => showDialog<void>(
+                  context: context,
+                  barrierDismissible: true,
+                  builder: (_) => const FishermanLogoutScreen(),
+                ),
               ),
               const SizedBox(height: 24),
             ],

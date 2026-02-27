@@ -77,7 +77,7 @@ class SpotOwnerFlowScaffold extends StatelessWidget {
                         constraints: const BoxConstraints(),
                         icon: const Icon(
                           Icons.arrow_back_ios_new,
-                          size: 14,
+                          size: 16,
                           color: Color(0xFF1E2530),
                         ),
                       ),
@@ -86,8 +86,8 @@ class SpotOwnerFlowScaffold extends StatelessWidget {
                       title,
                       style: const TextStyle(
                         color: SpotOwnerProfilePalette.darkText,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

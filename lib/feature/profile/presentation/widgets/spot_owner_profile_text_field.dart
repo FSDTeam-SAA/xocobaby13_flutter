@@ -28,8 +28,8 @@ class SpotOwnerProfileTextField extends StatelessWidget {
           label,
           style: const TextStyle(
             color: SpotOwnerProfilePalette.darkText,
-            fontSize: 11.8,
-            fontWeight: FontWeight.w600,
+            fontSize: 17,
+            fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 6),
@@ -41,17 +41,17 @@ class SpotOwnerProfileTextField extends StatelessWidget {
           keyboardType: keyboardType,
           style: const TextStyle(
             color: Color(0xFF1C2430),
-            fontSize: 12.5,
+            fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFFA8ADB7), fontSize: 12),
+            hintStyle: const TextStyle(color: Color(0xFFA8ADB7), fontSize: 14),
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
-              vertical: 8,
+              vertical: 10,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),

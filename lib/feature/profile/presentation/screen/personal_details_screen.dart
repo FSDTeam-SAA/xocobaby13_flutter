@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/model/user_profile_data_model.dart';
-import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_avatar.dart';
-import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_style.dart';
-import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_text_field.dart';
+import 'package:xocobaby13/feature/profile/presentation/widgets/profile_avatar.dart';
+import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
+import 'package:xocobaby13/feature/profile/presentation/widgets/profile_text_field.dart';
 
-class SpotOwnerPersonalDetailsScreen extends StatefulWidget {
-  const SpotOwnerPersonalDetailsScreen({super.key});
+class PersonalDetailsScreen extends StatefulWidget {
+  const PersonalDetailsScreen({super.key});
 
   @override
-  State<SpotOwnerPersonalDetailsScreen> createState() =>
-      _SpotOwnerPersonalDetailsScreenState();
+  State<PersonalDetailsScreen> createState() =>
+      _PersonalDetailsScreenState();
 }
 
-class _SpotOwnerPersonalDetailsScreenState
-    extends State<SpotOwnerPersonalDetailsScreen> {
+class _PersonalDetailsScreenState
+    extends State<PersonalDetailsScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
@@ -64,69 +64,77 @@ class _SpotOwnerPersonalDetailsScreenState
 
     controller.updateProfile(updated);
     context.pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Personal details updated.'),
+        margin: const EdgeInsets.all(14),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.black.withValues(alpha: 0.78),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return SpotOwnerFlowScaffold(
+    return ProfileFlowScaffold(
       title: 'Personal Details',
       showBack: true,
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Center(
-              child: SpotOwnerProfileAvatar(
+              child: ProfileAvatar(
                 profile: _draft,
-                size: 68,
+                size: 86,
                 onEditTap: _pickAvatar,
               ),
             ),
-            const SizedBox(height: 10),
-            SpotOwnerProfileTextField(
+            const SizedBox(height: 14),
+            ProfileTextField(
               label: 'Full name',
               controller: _nameController,
               hint: 'Mr. Mack',
             ),
-            const SizedBox(height: 12),
-            SpotOwnerProfileTextField(
+            const SizedBox(height: 14),
+            ProfileTextField(
               label: 'Email address',
               controller: _emailController,
               hint: 'you@gmail.com',
               keyboardType: TextInputType.emailAddress,
             ),
-            const SizedBox(height: 12),
-            SpotOwnerProfileTextField(
+            const SizedBox(height: 14),
+            ProfileTextField(
               label: 'Phone Number',
               controller: _phoneController,
               hint: '(217) 555-0113',
               keyboardType: TextInputType.phone,
             ),
-            const SizedBox(height: 12),
-            SpotOwnerProfileTextField(
+            const SizedBox(height: 14),
+            ProfileTextField(
               label: 'Write A Description About You',
               controller: _descriptionController,
               hint: '',
               maxLines: 4,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
-              height: 40,
+              height: 44,
               child: ElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: SpotOwnerProfilePalette.blue,
+                  backgroundColor: ProfilePalette.blue,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 child: const Text(
                   'Save',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
               ),
             ),
