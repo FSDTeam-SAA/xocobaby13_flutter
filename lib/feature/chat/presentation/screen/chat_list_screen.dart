@@ -8,7 +8,14 @@ import 'package:xocobaby13/feature/chat/presentation/widgets/chat_style.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_thread_tile.dart';
 
 class ChatListScreen extends StatefulWidget {
-  const ChatListScreen({super.key});
+  final Color backgroundColor;
+  final bool safeAreaBottom;
+
+  const ChatListScreen({
+    super.key,
+    this.backgroundColor = ChatPalette.surface,
+    this.safeAreaBottom = true,
+  });
 
   @override
   State<ChatListScreen> createState() => _ChatListScreenState();
@@ -53,10 +60,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: ChatPalette.surface,
+      color: widget.backgroundColor,
       width: double.infinity,
       height: double.infinity,
       child: SafeArea(
+        bottom: widget.safeAreaBottom,
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(

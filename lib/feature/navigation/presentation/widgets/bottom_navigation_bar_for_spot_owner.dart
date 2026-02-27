@@ -25,11 +25,18 @@ class BottomNavigationBarForSpotOwner extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
         child: Container(
-          height: 84,
-          clipBehavior: Clip.antiAlias,
+          height: 70,
           decoration: BoxDecoration(
             color: const Color(0xFFF3F3F3),
             borderRadius: BorderRadius.circular(42),
+            border: Border.all(color: const Color(0xFFE1E7F0)),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x140F172A),
+                blurRadius: 16,
+                offset: Offset(0, 8),
+              ),
+            ],
           ),
           child: Row(
             children: List<Widget>.generate(_items.length, (int index) {

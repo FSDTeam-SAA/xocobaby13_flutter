@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/presentation/routes/spot_owner_profile_routes.dart';
+import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_logout_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/activity_card.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_avatar.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_style.dart';
@@ -80,7 +81,11 @@ class SpotOwnerProfileMenuContent extends StatelessWidget {
             iconColor: SpotOwnerProfilePalette.dangerRed,
             iconBackgroundColor: SpotOwnerProfilePalette.dangerBackground,
             showChevron: false,
-            onTap: () => context.push(SpotOwnerProfileRouteNames.logout),
+            onTap: () => showDialog<void>(
+              context: context,
+              barrierDismissible: true,
+              builder: (_) => const SpotOwnerLogoutScreen(),
+            ),
           ),
           const SizedBox(height: 10),
         ],

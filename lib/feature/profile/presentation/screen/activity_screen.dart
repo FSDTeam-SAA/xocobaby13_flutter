@@ -7,76 +7,152 @@ import 'package:xocobaby13/feature/profile/presentation/widgets/activity_card.da
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
 
 class ActivityScreen extends StatelessWidget {
-  const ActivityScreen({super.key});
+  final String title;
+  final bool showBack;
+  final bool embedded;
+  final bool useDetailsRoute;
+
+  const ActivityScreen({
+    super.key,
+    this.title = 'My Activity',
+    this.showBack = true,
+    this.embedded = false,
+    this.useDetailsRoute = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final ProfileController controller = ProfileController.instance();
 
-    return ProfileFlowScaffold(
-      title: 'My Activity',
-      showBack: true,
-      child: Obx(() {
-        final List<ActivityItemModel> visibleItems =
-            controller.filteredActivityItems;
+    final Widget content = Obx(() {
+      final List<ActivityItemModel> visibleItems =
+          controller.filteredActivityItems;
 
-        return Column(
-          children: <Widget>[
-            const SizedBox(height: 6),
-            Row(
-              children: ActivityStatusModel.values.map((
-                ActivityStatusModel status,
-              ) {
-                final bool selected =
-                    controller.selectedActivityStatus.value == status;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => controller.setActivityStatus(status),
-                    child: Column(
-                      children: <Widget>[
-                        Text(
-                          status.label,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                            color: const Color(0xFF1F252F),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          height: 8,
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? ProfilePalette.blue
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
+      final Widget tabs = Row(
+        children: ActivityStatusModel.values.map((ActivityStatusModel status) {
+          final bool selected =
+              controller.selectedActivityStatus.value == status;
+          return Expanded(
+            child: _BookingTab(
+              label: status.label,
+              isSelected: selected,
+              onTap: () => controller.setActivityStatus(status),
             ),
-           
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.only(bottom: 12),
-                itemCount: visibleItems.length,
-                separatorBuilder: (_, int index) => const SizedBox(height: 16),
-                itemBuilder: (BuildContext context, int index) {
-                  return ActivityCard(item: visibleItems[index]);
-                },
-              ),
+          );
+        }).toList(),
+      );
+
+      final List<Widget> cards = visibleItems
+          .map(
+            (ActivityItemModel item) => ActivityCard(
+              item: item,
+              useDetailsRoute: useDetailsRoute,
             ),
-          ],
+          )
+          .toList();
+
+      if (embedded) {
+        final List<Widget> cardWidgets = <Widget>[];
+        for (final Widget card in cards) {
+          cardWidgets.add(card);
+          cardWidgets.add(const SizedBox(height: 18));
+        }
+        if (cardWidgets.isNotEmpty) {
+          cardWidgets.removeLast();
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(14, 18, 14, 120),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              tabs,
+              const SizedBox(height: 18),
+              ...cardWidgets,
+            ],
+          ),
         );
-      }),
+      }
+
+      return Column(
+        children: <Widget>[
+          const SizedBox(height: 6),
+          tabs,
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.only(bottom: 12),
+              itemCount: visibleItems.length,
+              separatorBuilder: (_, int index) => const SizedBox(height: 16),
+              itemBuilder: (BuildContext context, int index) {
+                return ActivityCard(
+                  item: visibleItems[index],
+                  useDetailsRoute: useDetailsRoute,
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    });
+
+    if (embedded) {
+      return SafeArea(bottom: false, child: content);
+    }
+
+    return ProfileFlowScaffold(
+      title: title,
+      showBack: showBack,
+      child: content,
+    );
+  }
+}
+
+class _BookingTab extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _BookingTab({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: <Widget>[
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: const Color(0xFF1D2A36),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            width: double.infinity,
+            height: 6,
+            decoration: BoxDecoration(
+              color: isSelected ? ProfilePalette.blue : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: isSelected
+                  ? const <BoxShadow>[
+                      BoxShadow(
+                        color: Color(0x331787CF),
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

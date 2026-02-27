@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_bank_account_success_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_earnings_screen.dart';
@@ -50,7 +51,23 @@ class SpotOwnerProfileRoutes {
     ),
     GoRoute(
       path: SpotOwnerProfileRouteNames.logout,
-      builder: (_, _) => const SpotOwnerLogoutScreen(),
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return CustomTransitionPage<void>(
+          opaque: false,
+          barrierDismissible: true,
+          barrierColor: Colors.black45,
+          transitionDuration: const Duration(milliseconds: 160),
+          child: const SpotOwnerLogoutScreen(),
+          transitionsBuilder: (
+            BuildContext context,
+            Animation<double> animation,
+            Animation<double> secondaryAnimation,
+            Widget child,
+          ) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        );
+      },
     ),
   ];
 }

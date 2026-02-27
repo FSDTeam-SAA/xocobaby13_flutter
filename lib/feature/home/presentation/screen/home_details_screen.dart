@@ -4,9 +4,30 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 
-class HomeDetailsScreen extends StatelessWidget {
-  const HomeDetailsScreen({super.key});
+class HomeDetailsScreen extends StatefulWidget {
+  final bool isBooked;
+  final bool showBookingButton;
+
+  const HomeDetailsScreen({
+    super.key,
+    this.isBooked = false,
+    this.showBookingButton = true,
+  });
+
+  @override
+  State<HomeDetailsScreen> createState() => _HomeDetailsScreenState();
+}
+
+class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
+  late bool _isBooked;
+
+  @override
+  void initState() {
+    super.initState();
+    _isBooked = widget.isBooked;
+  }
 
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -15,6 +36,227 @@ class HomeDetailsScreen extends StatelessWidget {
         behavior: SnackBarBehavior.floating,
         duration: const Duration(milliseconds: 1200),
       ),
+    );
+  }
+
+  void _openCancellationSheet() {
+    String? selectedReason;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext sheetContext) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheetState) {
+            return Container(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD9E3EE),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const Center(
+                      child: Text(
+                        'Cancellation',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFE23A3A),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF1787CF)),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80',
+                              width: 72,
+                              height: 56,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                width: 72,
+                                height: 56,
+                                color: const Color(0xFFE2E8F1),
+                                child: const Icon(Icons.photo, size: 20),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const <Widget>[
+                                Text(
+                                  'Crystal Lake Sanctuary',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1D2A36),
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '7:00 AM - 5:00 PM',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    color: Color(0xFF6A7B8C),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Montana, USA   •   Feb 05, 2026',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    color: Color(0xFF6A7B8C),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            children: const <Widget>[
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundImage: NetworkImage(
+                                  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                r'$120',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1E7CC8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Reason for Cancellation',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1D2A36),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedReason,
+                      icon: const Icon(Icons.keyboard_arrow_down),
+                      decoration: InputDecoration(
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 12),
+                        filled: true,
+                        fillColor: Colors.white,
+                        hintText: 'Select a reason',
+                        hintStyle: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF6A7B8C),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFD2DEE9)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1787CF),
+                          ),
+                        ),
+                      ),
+                      items: const <DropdownMenuItem<String>>[
+                        DropdownMenuItem(
+                          value: 'Bad Weather',
+                          child: Text('Bad Weather'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Wrong Spot',
+                          child: Text('Wrong Spot'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Emergency',
+                          child: Text('Emergency'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Others',
+                          child: Text('Others'),
+                        ),
+                      ],
+                      onChanged: (String? value) {
+                        setSheetState(() => selectedReason = value);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 42,
+                      child: ElevatedButton(
+                        onPressed: selectedReason == null
+                            ? null
+                            : () {
+                                Navigator.of(sheetContext).pop();
+                                context.push(HomeRouteNames.refundRequest);
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1787CF),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Request For Refund',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -77,10 +319,10 @@ class HomeDetailsScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       child: Image.network(
                         'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
-                        height: 250,
+                        height: 310,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (context, error, stackTrace) => Container(
                           height: 250,
                           color: const Color(0xFFE2E8F1),
                           child: const Icon(Icons.photo, size: 40),
@@ -102,7 +344,8 @@ class HomeDetailsScreen extends StatelessWidget {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: photos.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 8),
                         itemBuilder: (BuildContext context, int index) {
                           return Stack(
                             children: <Widget>[
@@ -113,7 +356,8 @@ class HomeDetailsScreen extends StatelessWidget {
                                   width: 62,
                                   height: 62,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
                                     width: 62,
                                     height: 62,
                                     color: const Color(0xFFE2E8F1),
@@ -523,7 +767,7 @@ class HomeDetailsScreen extends StatelessWidget {
                           top: 12,
                           right: 12,
                           child: GestureDetector(
-                            onTap: () => _showMessage(context, 'Get Direction'),
+                            onTap: () => context.push(HomeRouteNames.direction),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
@@ -582,35 +826,38 @@ class HomeDetailsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            SafeArea(
-              top: false,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-                color: const Color(0xFFF2F9FF),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () => _showMessage(context, 'Book Now'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1787CF),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+            if (widget.showBookingButton)
+              SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                  color: const Color(0xFFF2F9FF),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _isBooked
+                          ? _openCancellationSheet
+                          : () => context.push(HomeRouteNames.payment),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1787CF),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'Book Now',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                      child: Text(
+                        _isBooked ? 'Cancel & Refund' : 'Book Now',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
