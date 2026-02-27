@@ -9,6 +9,7 @@ class SpotOwnerProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SpotOwnerGradientBackground(
       child: SafeArea(
+        bottom: false,
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 120),
           child: Column(

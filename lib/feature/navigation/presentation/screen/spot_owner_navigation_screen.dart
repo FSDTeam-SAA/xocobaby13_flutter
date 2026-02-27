@@ -41,7 +41,10 @@ class SpotOwnerNavigationScreen extends StatelessWidget {
             children: const <Widget>[
               SpotOwnerHomeScreen(),
               SpotOwnerEventsScreen(),
-              ChatListScreen(),
+              ChatListScreen(
+                backgroundColor: Colors.transparent,
+                safeAreaBottom: false,
+              ),
               SpotOwnerProfileScreen(),
             ],
           ),
