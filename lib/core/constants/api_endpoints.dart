@@ -109,6 +109,7 @@ base class ApiEndpoints {
   static const String filterRide = _Ride.filterRide;
 
   // ---------------------- Booking -----------------------------
+  static const String createBooking = _Booking.createBooking;
   static String getAllBookingsForARide(String rideId) =>
       _Booking.getAllBookingsForARide(rideId);
   static const String getMyBookings = _Booking.getMyBookings;
@@ -145,6 +146,13 @@ base class ApiEndpoints {
   ///////////
   ///
   static String timeExtend(String chatId) => _Message.timeExtend(chatId);
+
+  // ---------------------- Spot -----------------------------
+  /// ### get
+  static const String nearbySpots = _Spot.nearby;
+  static String spotById(String id) => _Spot.byId(id);
+  static const String searchSpots = _Spot.search;
+  static const String recommendedSpots = _Spot.recommended;
 
   // ---------------------- LICENSE -----------------------------
   /// ### get
@@ -218,6 +226,15 @@ class _Notification {
   static const String getAllNotifications = '$_notificationRoute/';
 }
 
+// ---------------------- Spot -----------------------------
+class _Spot {
+  static const String _spotRoute = '${ApiEndpoints.baseUrl}/spot';
+  static const String nearby = '$_spotRoute/nearby';
+  static String byId(String id) => '$_spotRoute/$id';
+  static const String search = '$_spotRoute/search';
+  static const String recommended = '$_spotRoute/recommended';
+}
+
 // ---------------------- USER -----------------------------
 class _User {
   static const String _userRoute = '${ApiEndpoints.baseUrl}/user';
@@ -260,7 +277,8 @@ class _Ride {
 }
 
 class _Booking {
-  static const String _bookingRoute = '${ApiEndpoints.baseUrl}/booking';
+  static const String _bookingRoute = '${ApiEndpoints.baseUrl}/bookings';
+  static const String createBooking = _bookingRoute;
   static const String getMyBookings = "$_bookingRoute/my";
   static String getAllBookingsForARide(String rideId) =>
       "$_bookingRoute/ride/$rideId";

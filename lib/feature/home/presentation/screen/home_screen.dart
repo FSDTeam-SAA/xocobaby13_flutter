@@ -1,5 +1,8 @@
+import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
@@ -14,6 +17,40 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final PageController _liveController;
+  bool _isLoadingLive = false;
+  String? _liveError;
+  List<_LiveEvent> _liveEvents = const <_LiveEvent>[];
+  bool _isLoadingNearby = false;
+  String? _nearbyError;
+  List<_PopularPlace> _popularPlaces = const <_PopularPlace>[];
+  bool _isLoadingRecommended = false;
+  String? _recommendedError;
+  List<_RecommendedPlace> _recommendedPlaces = const <_RecommendedPlace>[];
+  static const double _defaultNearbyLat = 23.8103;
+  static const double _defaultNearbyLng = 90.4125;
+  static const double _defaultNearbyDistanceKm = 15;
+  final double _nearbyLat = _defaultNearbyLat;
+  final double _nearbyLng = _defaultNearbyLng;
+  final double _nearbyDistanceKm = _defaultNearbyDistanceKm;
+  static const List<String> _defaultAttendees = <String>[
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80',
+  ];
+  static const List<String> _monthNames = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
 
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -29,6 +66,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _liveController = PageController();
+    _loadLiveBookings();
+    _loadNearbySpots();
+    _loadRecommendedSpots();
   }
 
   @override
@@ -37,93 +77,318 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  Future<void> _loadLiveBookings() async {
+    if (_isLoadingLive) return;
+    setState(() {
+      _isLoadingLive = true;
+      _liveError = null;
+    });
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.getMyBookings,
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final List<_LiveEvent> bookings = <_LiveEvent>[];
+      if (data is List) {
+        for (final item in data) {
+          if (item is Map) {
+            bookings.add(
+              _mapBookingToLiveEvent(Map<String, dynamic>.from(item)),
+            );
+          }
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _liveEvents = bookings;
+        _isLoadingLive = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _liveError = 'Failed to load live bookings';
+        _isLoadingLive = false;
+      });
+    }
+  }
+
+  _LiveEvent _mapBookingToLiveEvent(Map<String, dynamic> booking) {
+    final Map<String, dynamic> spot =
+        booking['spot'] is Map ? Map<String, dynamic>.from(booking['spot']) : {};
+    final Map<String, dynamic> owner =
+        booking['owner'] is Map ? Map<String, dynamic>.from(booking['owner']) : {};
+    final Map<String, dynamic> slot =
+        booking['slot'] is Map ? Map<String, dynamic>.from(booking['slot']) : {};
+    final String title = _readString(spot['title'], fallback: 'Spot Booking');
+    final String location = 'Unknown location';
+    final String date = _formatDate(booking['date']?.toString());
+    final String time =
+        '${_readString(slot['start'], fallback: '00:00')} - ${_readString(slot['end'], fallback: '00:00')}';
+    final String hostName =
+        _readString(owner['fullName'], fallback: 'Spot Owner');
+    final String hostAvatarUrl = _defaultAttendees.first;
+    final String imageUrl = _pickImageUrl(spot['images']).isEmpty
+        ? 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80'
+        : _pickImageUrl(spot['images']);
+
+    return _LiveEvent(
+      id: booking['_id']?.toString(),
+      title: title,
+      location: location,
+      date: date,
+      time: time,
+      hostName: hostName,
+      rating: 0,
+      reviews: 0,
+      imageUrl: imageUrl,
+      hostAvatarUrl: hostAvatarUrl,
+      isArrived: false,
+    );
+  }
+
+  void _handleLiveStatusTap(int index) {
+    setState(() {
+      final _LiveEvent event = _liveEvents[index];
+      if (!event.isArrived) {
+        _liveEvents[index] = event.copyWith(isArrived: true);
+      } else {
+        _liveEvents = List<_LiveEvent>.from(_liveEvents)..removeAt(index);
+      }
+    });
+  }
+
+  Future<void> _loadNearbySpots() async {
+    if (_isLoadingNearby) return;
+    setState(() {
+      _isLoadingNearby = true;
+      _nearbyError = null;
+    });
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.nearbySpots,
+        queryParameters: <String, dynamic>{
+          'lat': _nearbyLat,
+          'lng': _nearbyLng,
+          'distanceKm': _nearbyDistanceKm,
+        },
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final List<_PopularPlace> spots = <_PopularPlace>[];
+      if (data is List) {
+        for (final item in data) {
+          if (item is Map) {
+            spots.add(_mapSpotToPopularPlace(Map<String, dynamic>.from(item)));
+          }
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _popularPlaces = spots;
+        _isLoadingNearby = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _nearbyError = 'Failed to load nearby spots';
+        _isLoadingNearby = false;
+      });
+    }
+  }
+
+  Future<void> _loadRecommendedSpots() async {
+    if (_isLoadingRecommended) return;
+    setState(() {
+      _isLoadingRecommended = true;
+      _recommendedError = null;
+    });
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.recommendedSpots,
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final List<_RecommendedPlace> spots = <_RecommendedPlace>[];
+      if (data is List) {
+        for (final item in data) {
+          if (item is Map) {
+            spots.add(
+              _mapSpotToRecommendedPlace(Map<String, dynamic>.from(item)),
+            );
+          }
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _recommendedPlaces = spots;
+        _isLoadingRecommended = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _recommendedError = 'Failed to load recommended spots';
+        _isLoadingRecommended = false;
+      });
+    }
+  }
+
+  _PopularPlace _mapSpotToPopularPlace(Map<String, dynamic> spot) {
+    final String title = spot['title']?.toString().trim().isNotEmpty == true
+        ? spot['title'].toString()
+        : 'Untitled Spot';
+    final String location = _formatLocation(spot['location']);
+    final String date = _formatDate(spot['createdAt']?.toString());
+    final double rating = _readDouble(spot['ratingAvg']);
+    final int reviews = _readInt(spot['ratingCount']);
+    final int pricePerDay = _readInt(spot['price']);
+    final String imageUrl = _pickImageUrl(spot['images']);
+    final List<String> tags = _readStringList(spot['features']);
+    final List<double> coords = _readCoordinates(spot['location']);
+    final String? spotId = spot['_id']?.toString();
+
+    return _PopularPlace(
+      title: title,
+      location: location,
+      date: date,
+      rating: rating,
+      reviews: reviews,
+      timeRange: 'All day',
+      pricePerDay: pricePerDay,
+      imageUrl: imageUrl.isEmpty
+          ? 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80'
+          : imageUrl,
+      tags: tags.isEmpty ? const <String>['Popular'] : tags,
+      attendees: _defaultAttendees,
+      attendeesLabel: 'Nearby anglers',
+      attendeesSubtitle: 'are going in this location',
+      lat: coords.isNotEmpty ? coords[0] : null,
+      lng: coords.length > 1 ? coords[1] : null,
+      id: spotId,
+    );
+  }
+
+  _RecommendedPlace _mapSpotToRecommendedPlace(Map<String, dynamic> spot) {
+    final String title = spot['title']?.toString().trim().isNotEmpty == true
+        ? spot['title'].toString()
+        : 'Untitled Spot';
+    final String location = _formatLocation(spot['location']);
+    final String date = _formatDate(spot['createdAt']?.toString());
+    final double rating = _readDouble(spot['ratingAvg']);
+    final int reviews = _readInt(spot['ratingCount']);
+    final String imageUrl = _pickImageUrl(spot['images']);
+    final List<double> coords = _readCoordinates(spot['location']);
+    final String? spotId = spot['_id']?.toString();
+
+    return _RecommendedPlace(
+      title: title,
+      location: location,
+      date: date,
+      rating: rating,
+      reviews: reviews,
+      timeRange: 'All day',
+      imageUrl: imageUrl.isEmpty
+          ? 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&q=80'
+          : imageUrl,
+      id: spotId,
+      lat: coords.isNotEmpty ? coords[0] : null,
+      lng: coords.length > 1 ? coords[1] : null,
+    );
+  }
+
+  String _formatLocation(dynamic location) {
+    if (location is Map) {
+      final String address = location['address']?.toString() ?? '';
+      final String city = location['city']?.toString() ?? '';
+      final String country = location['country']?.toString() ?? '';
+      final parts = <String>[
+        if (address.isNotEmpty) address,
+        if (city.isNotEmpty) city,
+        if (country.isNotEmpty) country,
+      ];
+      if (parts.isNotEmpty) {
+        return parts.join(', ');
+      }
+    }
+    return 'Unknown location';
+  }
+
+  String _formatDate(String? value) {
+    if (value == null || value.isEmpty) return 'Available';
+    final DateTime? dateTime = DateTime.tryParse(value);
+    if (dateTime == null) return 'Available';
+    final String month = _monthNames[dateTime.month - 1];
+    final String day = dateTime.day.toString().padLeft(2, '0');
+    return '$month $day, ${dateTime.year}';
+  }
+
+  String _readString(dynamic value, {String fallback = ''}) {
+    final String text = value?.toString().trim() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
+
+  String _pickImageUrl(dynamic images) {
+    if (images is List && images.isNotEmpty) {
+      final first = images.first;
+      if (first is String) return first;
+      if (first is Map && first['url'] != null) {
+        return first['url'].toString();
+      }
+    }
+    return '';
+  }
+
+  List<double> _readCoordinates(dynamic location) {
+    if (location is Map) {
+      final point = location['point'];
+      if (point is Map && point['coordinates'] is List) {
+        final List coords = point['coordinates'] as List;
+        if (coords.length >= 2) {
+          final double lngValue = _readDouble(coords[0]);
+          final double latValue = _readDouble(coords[1]);
+          return <double>[latValue, lngValue];
+        }
+      }
+    }
+    return <double>[];
+  }
+
+  List<String> _readStringList(dynamic value) {
+    if (value is List) {
+      return value
+          .where((element) => element != null)
+          .map((element) => element.toString())
+          .where((element) => element.isNotEmpty)
+          .toList();
+    }
+    return <String>[];
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.round();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  double _readDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0;
+    return 0;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<_LiveEvent> liveEvents = <_LiveEvent>[
-      const _LiveEvent(
-        title: 'Crystal Lake Sanctuary',
-        location: 'Montana, USA',
-        date: 'Feb 05, 2026',
-        time: '7:00 AM - 5:00 PM',
-        hostName: 'John Mitchell',
-        rating: 4.5,
-        reviews: 18,
-        statusLabel: 'Arrived',
-        statusColor: Color(0xFF1787CF),
-        imageUrl:
-            'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80',
-        hostAvatarUrl:
-            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-      ),
-      const _LiveEvent(
-        title: 'Crystal Lake Sanctuary',
-        location: 'Montana, USA',
-        date: 'Feb 05, 2026',
-        time: '7:00 AM - 5:00 PM',
-        hostName: 'John Mitchell',
-        rating: 4.6,
-        reviews: 18,
-        statusLabel: 'Check Out',
-        statusColor: Color(0xFF111827),
-        imageUrl:
-            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=900&q=80',
-        hostAvatarUrl:
-            'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
-      ),
-    ];
+    final List<_PopularPlace> popularPlaces = _popularPlaces;
 
-    final List<_PopularPlace> popularPlaces = <_PopularPlace>[
-      const _PopularPlace(
-        title: 'Crystal Lake Sanctuary',
-        location: 'Montana, USA',
-        date: 'Feb 10, 2026',
-        rating: 4.5,
-        reviews: 18,
-        timeRange: '7:00 AM - 5:00 PM',
-        pricePerDay: 120,
-        imageUrl:
-            'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
-        tags: <String>['Freshwater', 'Catfish', 'Kayak', '2+ more'],
-        attendees: <String>[
-          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-          'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
-          'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80',
-        ],
-        attendeesLabel: 'Mr. Mike & 4 Others',
-        attendeesSubtitle: 'are going in this location',
-      ),
-      const _PopularPlace(
-        title: 'Crystal Lake Sanctuary',
-        location: 'Montana, USA',
-        date: 'Feb 10, 2026',
-        rating: 4.5,
-        reviews: 18,
-        timeRange: '7:00 AM - 5:00 PM',
-        pricePerDay: 120,
-        imageUrl:
-            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80',
-        tags: <String>['Freshwater', 'Catfish'],
-        attendees: <String>[
-          'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80',
-          'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
-        ],
-        attendeesLabel: 'Mr. Mike & 4 Others',
-        attendeesSubtitle: 'are going in this location',
-      ),
-    ];
-
-    const List<_RecommendedPlace> recommendedPlaces = <_RecommendedPlace>[
-      _RecommendedPlace(
-        title: 'Crystal Lake Sanctuary',
-        location: 'Montana, USA',
-        date: 'Feb 10, 2026',
-        rating: 4.5,
-        reviews: 18,
-        timeRange: '7:00 AM - 5:00 PM',
-        imageUrl:
-            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&q=80',
-      ),
-    ];
+    final List<_RecommendedPlace> recommendedPlaces = _recommendedPlaces;
 
     return SafeArea(
       bottom: false,
@@ -190,40 +455,75 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             SizedBox(
               height: 126,
-              child: PageView.builder(
-                controller: _liveController,
-                itemCount: liveEvents.length,
-                itemBuilder: (BuildContext context, int index) {
-                  return AnimatedBuilder(
-                    animation: _liveController,
-                    child: _LiveEventCard(
-                      data: liveEvents[index],
-                      onStatusTap: () =>
-                          _showMessage(context, liveEvents[index].statusLabel),
-                    ),
-                    builder: (BuildContext context, Widget? child) {
-                      double scale = 1;
-                      double translate = 0;
-                      if (_liveController.hasClients) {
-                        final double page =
-                            _liveController.page ??
-                            _liveController.initialPage.toDouble();
-                        final double delta = (page - index).abs();
-                        scale = (1 - (delta * 0.05)).clamp(0.95, 1.0);
-                        translate = (delta * 6).clamp(0.0, 6.0);
-                      }
-                      return Transform.translate(
-                        offset: Offset(translate, 0),
-                        child: Transform.scale(
-                          scale: scale,
-                          alignment: Alignment.center,
-                          child: child,
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
+              child: _isLoadingLive
+                  ? const Center(child: CircularProgressIndicator())
+                  : _liveError != null
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                _liveError!,
+                                style: const TextStyle(
+                                  color: Color(0xFF6A7B8C),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: _loadLiveBookings,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _liveEvents.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No live bookings',
+                                style: TextStyle(
+                                  color: Color(0xFF6A7B8C),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            )
+                          : PageView.builder(
+                              controller: _liveController,
+                              itemCount: _liveEvents.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                return AnimatedBuilder(
+                                  animation: _liveController,
+                                  child: _LiveEventCard(
+                                    data: _liveEvents[index],
+                                    onStatusTap: () =>
+                                        _handleLiveStatusTap(index),
+                                  ),
+                                  builder: (BuildContext context, Widget? child) {
+                                    double scale = 1;
+                                    double translate = 0;
+                                    if (_liveController.hasClients) {
+                                      final double page =
+                                          _liveController.page ??
+                                          _liveController.initialPage.toDouble();
+                                      final double delta = (page - index).abs();
+                                      scale = (1 - (delta * 0.05))
+                                          .clamp(0.95, 1.0);
+                                      translate = (delta * 6).clamp(0.0, 6.0);
+                                    }
+                                    return Transform.translate(
+                                      offset: Offset(translate, 0),
+                                      child: Transform.scale(
+                                        scale: scale,
+                                        alignment: Alignment.center,
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
             ),
             const SizedBox(height: 18),
             _SectionHeader(
@@ -234,18 +534,73 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 14),
             SizedBox(
               height: 560,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: popularPlaces.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 18),
-                itemBuilder: (BuildContext context, int index) {
-                  return _PopularCard(
-                    data: popularPlaces[index],
-                    onViewDetails: () =>
-                        context.push(HomeRouteNames.details),
-                  );
-                },
-              ),
+              child: _isLoadingNearby
+                  ? const Center(child: CircularProgressIndicator())
+                  : _nearbyError != null
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                _nearbyError!,
+                                style: const TextStyle(
+                                  color: Color(0xFF6A7B8C),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              TextButton(
+                                onPressed: _loadNearbySpots,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : popularPlaces.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No nearby spots found',
+                                style: TextStyle(
+                                  color: Color(0xFF6A7B8C),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: popularPlaces.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 18),
+                              itemBuilder: (BuildContext context, int index) {
+                                final _PopularPlace place = popularPlaces[index];
+                                return _PopularCard(
+                                  data: place,
+                                  onViewDetails: () {
+                                    final double lat =
+                                        place.lat ?? _nearbyLat;
+                                    final double lng =
+                                        place.lng ?? _nearbyLng;
+                                    final query = <String, String>{
+                                      'lat': lat.toString(),
+                                      'lng': lng.toString(),
+                                      'distanceKm':
+                                          _nearbyDistanceKm.toString(),
+                                    };
+                                    if (place.id != null &&
+                                        place.id!.isNotEmpty) {
+                                      query['id'] = place.id!;
+                                    }
+                                    final detailsUri = Uri(
+                                      path: HomeRouteNames.details,
+                                      queryParameters: query,
+                                    );
+                                    context.push(detailsUri.toString());
+                                  },
+                                );
+                              },
+                            ),
             ),
             const SizedBox(height: 18),
             _SectionHeader(
@@ -254,16 +609,66 @@ class _HomeScreenState extends State<HomeScreen> {
               onActionTap: () => _showMessage(context, 'Recommended'),
             ),
             const SizedBox(height: 14),
-            Column(
-              children: recommendedPlaces
-                  .map(
-                    (_RecommendedPlace place) => _RecommendedCard(
-                      data: place,
-                      onTap: () => context.push(HomeRouteNames.details),
+            if (_isLoadingRecommended)
+              const Center(child: CircularProgressIndicator())
+            else if (_recommendedError != null)
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      _recommendedError!,
+                      style: const TextStyle(
+                        color: Color(0xFF6A7B8C),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  )
-                  .toList(),
-            ),
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: _loadRecommendedSpots,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              )
+            else if (recommendedPlaces.isEmpty)
+              const Center(
+                child: Text(
+                  'No recommended spots found',
+                  style: TextStyle(
+                    color: Color(0xFF6A7B8C),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            else
+              Column(
+                children: recommendedPlaces
+                    .map(
+                      (_RecommendedPlace place) => _RecommendedCard(
+                        data: place,
+                        onTap: () {
+                          final query = <String, String>{};
+                          if (place.lat != null && place.lng != null) {
+                            query['lat'] = place.lat.toString();
+                            query['lng'] = place.lng.toString();
+                            query['distanceKm'] = '15';
+                          }
+                          if (place.id != null && place.id!.isNotEmpty) {
+                            query['id'] = place.id!;
+                          }
+                          final detailsUri = Uri(
+                            path: HomeRouteNames.details,
+                            queryParameters: query.isEmpty ? null : query,
+                          );
+                          context.push(detailsUri.toString());
+                        },
+                      ),
+                    )
+                    .toList(),
+              ),
           ],
         ),
       ),
@@ -440,6 +845,9 @@ class _LiveEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String statusLabel = data.isArrived ? 'Check Out' : 'Arrive';
+    final Color statusColor =
+        data.isArrived ? const Color(0xFF111827) : const Color(0xFF1787CF);
     return Container(
       width: double.infinity,
       height: 118,
@@ -566,11 +974,11 @@ class _LiveEventCard extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: data.statusColor,
+                            color: statusColor,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            data.statusLabel,
+                            statusLabel,
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -1117,6 +1525,7 @@ class _RecommendedCard extends StatelessWidget {
 }
 
 class _LiveEvent {
+  final String? id;
   final String title;
   final String location;
   final String date;
@@ -1124,12 +1533,12 @@ class _LiveEvent {
   final String hostName;
   final double rating;
   final int reviews;
-  final String statusLabel;
-  final Color statusColor;
   final String imageUrl;
   final String hostAvatarUrl;
+  final bool isArrived;
 
   const _LiveEvent({
+    this.id,
     required this.title,
     required this.location,
     required this.date,
@@ -1137,14 +1546,30 @@ class _LiveEvent {
     required this.hostName,
     required this.rating,
     required this.reviews,
-    required this.statusLabel,
-    required this.statusColor,
     required this.imageUrl,
     required this.hostAvatarUrl,
+    required this.isArrived,
   });
+
+  _LiveEvent copyWith({bool? isArrived}) {
+    return _LiveEvent(
+      id: id,
+      title: title,
+      location: location,
+      date: date,
+      time: time,
+      hostName: hostName,
+      rating: rating,
+      reviews: reviews,
+      imageUrl: imageUrl,
+      hostAvatarUrl: hostAvatarUrl,
+      isArrived: isArrived ?? this.isArrived,
+    );
+  }
 }
 
 class _PopularPlace {
+  final String? id;
   final String title;
   final String location;
   final String date;
@@ -1157,8 +1582,11 @@ class _PopularPlace {
   final List<String> attendees;
   final String attendeesLabel;
   final String attendeesSubtitle;
+  final double? lat;
+  final double? lng;
 
   const _PopularPlace({
+    this.id,
     required this.title,
     required this.location,
     required this.date,
@@ -1171,10 +1599,13 @@ class _PopularPlace {
     required this.attendees,
     required this.attendeesLabel,
     required this.attendeesSubtitle,
+    this.lat,
+    this.lng,
   });
 }
 
 class _RecommendedPlace {
+  final String? id;
   final String title;
   final String location;
   final String date;
@@ -1182,8 +1613,11 @@ class _RecommendedPlace {
   final int reviews;
   final String timeRange;
   final String imageUrl;
+  final double? lat;
+  final double? lng;
 
   const _RecommendedPlace({
+    this.id,
     required this.title,
     required this.location,
     required this.date,
@@ -1191,5 +1625,7 @@ class _RecommendedPlace {
     required this.reviews,
     required this.timeRange,
     required this.imageUrl,
+    this.lat,
+    this.lng,
   });
 }

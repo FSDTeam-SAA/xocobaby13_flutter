@@ -60,6 +60,7 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
     return '${_formatTime(_fromTime)}-${_formatTime(_toTime)}';
   }
 
+
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
     final DateTime initial = _selectedDate ?? DateTime(2026, 1, 21);

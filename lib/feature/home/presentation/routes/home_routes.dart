@@ -24,7 +24,20 @@ class HomeRoutes {
       builder: (context, state) {
         final bool isBooked =
             state.uri.queryParameters['booked']?.toLowerCase() == '1';
-        return HomeDetailsScreen(isBooked: isBooked);
+        final String? spotId = state.uri.queryParameters['id'];
+        double? readDouble(String key) {
+          final raw = state.uri.queryParameters[key];
+          if (raw == null) return null;
+          return double.tryParse(raw);
+        }
+
+        return HomeDetailsScreen(
+          isBooked: isBooked,
+          lat: readDouble('lat'),
+          lng: readDouble('lng'),
+          distanceKm: readDouble('distanceKm'),
+          spotId: spotId,
+        );
       },
     ),
     GoRoute(
