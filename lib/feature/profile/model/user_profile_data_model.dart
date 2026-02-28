@@ -8,6 +8,7 @@ class UserProfileDataModel {
   final String phone;
   final String description;
   final String avatarAssetPath;
+  final String avatarUrl;
   final Uint8List? avatarBytes;
 
   const UserProfileDataModel({
@@ -16,12 +17,16 @@ class UserProfileDataModel {
     required this.phone,
     required this.description,
     required this.avatarAssetPath,
+    required this.avatarUrl,
     required this.avatarBytes,
   });
 
   ImageProvider get avatarImageProvider {
     if (avatarBytes != null) {
       return MemoryImage(avatarBytes!);
+    }
+    if (avatarUrl.isNotEmpty) {
+      return NetworkImage(avatarUrl);
     }
     return AssetImage(avatarAssetPath);
   }
@@ -32,6 +37,7 @@ class UserProfileDataModel {
     String? phone,
     String? description,
     String? avatarAssetPath,
+    String? avatarUrl,
     Uint8List? avatarBytes,
   }) {
     return UserProfileDataModel(
@@ -40,6 +46,7 @@ class UserProfileDataModel {
       phone: phone ?? this.phone,
       description: description ?? this.description,
       avatarAssetPath: avatarAssetPath ?? this.avatarAssetPath,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       avatarBytes: avatarBytes ?? this.avatarBytes,
     );
   }

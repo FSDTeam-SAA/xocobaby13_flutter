@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/presentation/routes/spot_owner_profile_routes.dart';
-import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_logout_screen.dart';
+import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_logout_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/activity_card.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_avatar.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_style.dart';
@@ -84,7 +84,7 @@ class SpotOwnerProfileMenuContent extends StatelessWidget {
             onTap: () => showDialog<void>(
               context: context,
               barrierDismissible: true,
-              builder: (_) => const SpotOwnerLogoutScreen(),
+              builder: (_) => const FishermanLogoutScreen(),
             ),
           ),
           const SizedBox(height: 10),
