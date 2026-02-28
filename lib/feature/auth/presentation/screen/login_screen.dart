@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app_pigeon/app_pigeon.dart';
 import 'package:go_router/go_router.dart';
 import 'package:get/get.dart';
+import 'package:xocobaby13/feature/navigation/controller/navigation_controller.dart';
 import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
@@ -67,6 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final rawRole = (authRecord?.data['role'] ?? '').toString().trim();
       final normalizedRole =
           rawRole.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+      NavigationController.instance().setTabIndex(0);
       if (normalizedRole == 'spotowner') {
         context.go(NavigationRouteNames.spotOwnerMain);
       } else {

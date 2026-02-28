@@ -3,10 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:xocobaby13/feature/navigation/controller/navigation_controller.dart';
-import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
-import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_navigation_bar_for_baby.dart';
-import 'package:xocobaby13/feature/navigation/presentation/widgets/bottom_navigation_bar_for_spot_owner.dart';
+import 'package:xocobaby13/core/constants/api_endpoints.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -16,22 +13,15 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  bool _isSpotOwner = false;
+  bool _isLoading = false;
+  bool _isUpdatingAll = false;
+  String? _loadError;
+  List<_NotificationItem> _items = const <_NotificationItem>[];
 
   @override
   void initState() {
     super.initState();
-    _loadRole();
-  }
-
-  Future<void> _loadRole() async {
-    final authRecord = await Get.find<AuthorizedPigeon>().getCurrentAuthRecord();
-    final rawRole = (authRecord?.data['role'] ?? '').toString().trim();
-    final normalizedRole =
-        rawRole.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
-    if (mounted) {
-      setState(() => _isSpotOwner = normalizedRole == 'spotowner');
-    }
+    _loadNotifications();
   }
 
   void _showMessage(BuildContext context, String message) {
@@ -44,40 +34,122 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  void _handleTabTap(int index) {
-    final controller = NavigationController.instance();
-    controller.setTabIndex(index);
-    final route = _isSpotOwner
-        ? NavigationRouteNames.spotOwnerMain
-        : NavigationRouteNames.main;
-    context.go(route);
+  Future<void> _loadNotifications({bool showLoader = true}) async {
+    if (_isLoading) return;
+    if (showLoader) {
+      setState(() {
+        _isLoading = true;
+        _loadError = null;
+      });
+    } else {
+      setState(() => _loadError = null);
+    }
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.getAllNotifications,
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final List<_NotificationItem> notifications = <_NotificationItem>[];
+      if (data is List) {
+        for (final item in data) {
+          if (item is Map) {
+            notifications.add(
+              _NotificationItem.fromMap(Map<String, dynamic>.from(item)),
+            );
+          }
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _items = notifications;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = 'Failed to load notifications';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    if (_isUpdatingAll) return;
+    setState(() => _isUpdatingAll = true);
+    try {
+      await Get.find<AuthorizedPigeon>().patch(
+        ApiEndpoints.readAllNotifications,
+      );
+      if (!mounted) return;
+      setState(() {
+        _items = _items
+            .map((_NotificationItem item) => item.copyWith(isRead: true))
+            .toList(growable: false);
+      });
+      _showMessage(context, 'All notifications marked as read');
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage(context, 'Failed to mark all as read');
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingAll = false);
+      }
+    }
+  }
+
+  Future<void> _markNotificationAsRead(_NotificationItem item) async {
+    if (item.isRead || item.id.isEmpty) return;
+    try {
+      await Get.find<AuthorizedPigeon>().patch(
+        ApiEndpoints.markNotificationAsRead(notificationId: item.id),
+      );
+      if (!mounted) return;
+      setState(() {
+        _items = _items
+            .map(
+              (_NotificationItem current) =>
+                  current.id == item.id ? current.copyWith(isRead: true) : current,
+            )
+            .toList(growable: false);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage(context, 'Failed to mark as read');
+    }
+  }
+
+  Future<void> _deleteNotification(_NotificationItem item) async {
+    if (item.id.isEmpty) return;
+    final int existingIndex =
+        _items.indexWhere((_NotificationItem current) => current.id == item.id);
+    if (existingIndex == -1) return;
+    final List<_NotificationItem> updated =
+        List<_NotificationItem>.from(_items)
+          ..removeAt(existingIndex);
+    setState(() => _items = updated);
+    try {
+      await Get.find<AuthorizedPigeon>().delete(
+        ApiEndpoints.deleteNotification(notificationId: item.id),
+      );
+      if (!mounted) return;
+      _showMessage(context, 'Notification deleted');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        final List<_NotificationItem> reverted =
+            List<_NotificationItem>.from(_items);
+        reverted.insert(existingIndex, item);
+        _items = reverted;
+      });
+      _showMessage(context, 'Failed to delete notification');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<_NotificationItem> items = <_NotificationItem>[
-      const _NotificationItem(
-        title: 'You have booked Crystal Lake',
-        subtitle: 'A new booking has been made for 3 fishers',
-        time: 'Just now',
-      ),
-      const _NotificationItem(
-        title: 'John Mitchell is also going',
-        subtitle: 'Make more friends',
-        time: '5 minutes ago',
-      ),
-      const _NotificationItem(
-        title: 'You gave Montana Lake 5 star',
-        subtitle: '5 star reviews',
-        time: '10 minutes ago',
-      ),
-      const _NotificationItem(
-        title: 'Event Reminder',
-        subtitle: 'Your event has 5 days left',
-        time: '15 minutes ago',
-      ),
-    ];
-
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.transparent,
@@ -95,10 +167,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
           child: Column(
             children: <Widget>[
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                child: RefreshIndicator(
+                  onRefresh: () => _loadNotifications(showLoader: false),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                    physics: const AlwaysScrollableScrollPhysics(),
                     children: <Widget>[
                       Row(
                         children: <Widget>[
@@ -119,22 +192,100 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               color: Color(0xFF1D2A36),
                             ),
                           ),
+                          const Spacer(),
+                          if (_items.any(
+                            (_NotificationItem item) => !item.isRead,
+                          ))
+                            TextButton(
+                              onPressed: _isUpdatingAll ? null : _markAllAsRead,
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF1787CF),
+                                textStyle: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              child: _isUpdatingAll
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF1787CF),
+                                      ),
+                                    )
+                                  : const Text('Mark all read'),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Column(
-                        children: items
-                            .map(
-                              (_NotificationItem item) => _NotificationCard(
-                                item: item,
-                                onTap: () => _showMessage(
-                                  context,
-                                  item.title,
+                      if (_isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 40),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_loadError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 24),
+                          child: Center(
+                            child: Text(
+                              _loadError ?? 'Failed to load notifications',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6A7B8C),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        )
+                      else if (_items.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 24),
+                          child: Center(
+                            child: Text(
+                              'No notifications yet',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6A7B8C),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ..._items.map(
+                          (_NotificationItem item) {
+                            final Widget card = _NotificationCard(
+                              item: item,
+                              onTap: () {
+                                _markNotificationAsRead(item);
+                                _showMessage(context, item.title);
+                              },
+                            );
+                            if (item.id.isEmpty) {
+                              return card;
+                            }
+                            return Dismissible(
+                              key: ValueKey<String>(item.id),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 24),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE23A3A),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(
+                                  CupertinoIcons.delete,
+                                  color: Colors.white,
+                                  size: 20,
                                 ),
                               ),
-                            )
-                            .toList(),
-                      ),
+                              onDismissed: (_) => _deleteNotification(item),
+                              child: card,
+                            );
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -156,15 +307,19 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color borderColor =
+        item.isRead ? const Color(0xFFE2E8F1) : const Color(0xFF9CC8F6);
+    final Color cardColor =
+        item.isRead ? Colors.white : const Color(0xFFF3F8FF);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardColor,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF9CC8F6), width: 1),
+          border: Border.all(color: borderColor, width: 1),
           boxShadow: const <BoxShadow>[
             BoxShadow(
               color: Color(0x140F172A),
@@ -209,6 +364,17 @@ class _NotificationCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (!item.isRead) ...<Widget>[
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1787CF),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
                       const SizedBox(width: 8),
                       Text(
                         item.time,
@@ -222,7 +388,7 @@ class _NotificationCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    item.subtitle,
+                    item.message,
                     style: const TextStyle(
                       fontSize: 11,
                       color: Color(0xFF6A7B8C),
@@ -240,13 +406,92 @@ class _NotificationCard extends StatelessWidget {
 }
 
 class _NotificationItem {
+  final String id;
   final String title;
-  final String subtitle;
+  final String message;
   final String time;
+  final bool isRead;
+  final DateTime? createdAt;
 
   const _NotificationItem({
+    required this.id,
     required this.title,
-    required this.subtitle,
+    required this.message,
     required this.time,
+    required this.isRead,
+    required this.createdAt,
   });
+
+  _NotificationItem copyWith({bool? isRead}) {
+    return _NotificationItem(
+      id: id,
+      title: title,
+      message: message,
+      time: time,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt,
+    );
+  }
+
+  static _NotificationItem fromMap(Map<String, dynamic> map) {
+    String readString(dynamic value, {String fallback = ''}) {
+      final String text = value?.toString().trim() ?? '';
+      return text.isEmpty ? fallback : text;
+    }
+
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+      if (value is DateTime) return value;
+      final String raw = value.toString();
+      return DateTime.tryParse(raw);
+    }
+
+    String formatTimeAgo(DateTime? value) {
+      if (value == null) return 'Just now';
+      final DateTime now = DateTime.now();
+      final Duration diff = now.difference(value);
+      if (diff.isNegative) return 'Just now';
+      if (diff.inMinutes < 1) return 'Just now';
+      if (diff.inMinutes < 60) return '${diff.inMinutes} minutes ago';
+      if (diff.inHours < 24) return '${diff.inHours} hours ago';
+      if (diff.inDays < 7) return '${diff.inDays} days ago';
+      final int month = value.month;
+      final int day = value.day;
+      final String monthText = <String>[
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ][month - 1];
+      return '$monthText $day';
+    }
+
+    final String id = readString(map['_id'] ?? map['id']);
+    final String title = readString(map['title'], fallback: 'Notification');
+    final String message = readString(
+      map['message'] ?? map['body'] ?? map['subtitle'],
+      fallback: 'Tap to view details',
+    );
+    final DateTime? createdAt = parseDate(
+      map['createdAt'] ?? map['created_at'] ?? map['time'],
+    );
+    final bool isRead = map['isRead'] == true;
+
+    return _NotificationItem(
+      id: id,
+      title: title,
+      message: message,
+      time: formatTimeAgo(createdAt),
+      isRead: isRead,
+      createdAt: createdAt,
+    );
+  }
 }

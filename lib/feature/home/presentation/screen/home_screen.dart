@@ -26,6 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingRecommended = false;
   String? _recommendedError;
   List<_RecommendedPlace> _recommendedPlaces = const <_RecommendedPlace>[];
+  bool _isLoadingUnread = false;
+  int _unreadCount = 0;
   static const double _defaultNearbyLat = 23.8103;
   static const double _defaultNearbyLng = 90.4125;
   static const double _defaultNearbyDistanceKm = 15;
@@ -69,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadLiveBookings();
     _loadNearbySpots();
     _loadRecommendedSpots();
+    _loadUnreadCount();
   }
 
   @override
@@ -236,6 +239,32 @@ class _HomeScreenState extends State<HomeScreen> {
         _recommendedError = 'Failed to load recommended spots';
         _isLoadingRecommended = false;
       });
+    }
+  }
+
+  Future<void> _loadUnreadCount() async {
+    if (_isLoadingUnread) return;
+    setState(() => _isLoadingUnread = true);
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.getUnreadNotificationCount,
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      int count = 0;
+      if (data is Map) {
+        count = _readInt(data['unreadCount']);
+      }
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+        _isLoadingUnread = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingUnread = false);
     }
   }
 
@@ -424,10 +453,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: () => context.push(
-                    NotificationRouteNames.notifications,
-                  ),
-                  child: const _NotificationBell(),
+                  onTap: () async {
+                    await context.push(NotificationRouteNames.notifications);
+                    if (mounted) {
+                      _loadUnreadCount();
+                    }
+                  },
+                  child: _NotificationBell(unreadCount: _unreadCount),
                 ),
               ],
             ),
@@ -707,10 +739,13 @@ class _ProfileAvatar extends StatelessWidget {
 }
 
 class _NotificationBell extends StatelessWidget {
-  const _NotificationBell();
+  final int unreadCount;
+
+  const _NotificationBell({this.unreadCount = 0});
 
   @override
   Widget build(BuildContext context) {
+    final String badgeText = unreadCount > 99 ? '99+' : unreadCount.toString();
     return Container(
       width: 46,
       height: 46,
@@ -735,19 +770,31 @@ class _NotificationBell extends StatelessWidget {
               size: 22,
             ),
           ),
-          Positioned(
-            top: 10,
-            right: 12,
-            child: Container(
-              width: 9,
-              height: 9,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE23A3A),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+          if (unreadCount > 0)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                height: 16,
+                constraints: const BoxConstraints(minWidth: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE23A3A),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: Center(
+                  child: Text(
+                    badgeText,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

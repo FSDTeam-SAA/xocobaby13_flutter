@@ -51,7 +51,11 @@ base class ApiEndpoints {
   /// ### get
   static const String getAllNotifications = _Notification.getAllNotifications;
 
-  /// ### post
+  /// ### get
+  static const String getUnreadNotificationCount =
+      _Notification.getUnreadCount;
+
+  /// ### patch
   static const String readAllNotifications = _Notification.readAllNotifications;
 
   /// ### patch
@@ -60,6 +64,10 @@ base class ApiEndpoints {
 
   /// ### patch
   static const String markAllAsRead = _Notification.markAllAsRead;
+
+  /// ### delete
+  static String deleteNotification({required String notificationId}) =>
+      _Notification.deleteNotification(notificationId);
 
   // ---------------------- USER -----------------------------
 
@@ -217,13 +225,16 @@ class _Report {
 // ---------------------- Notification -----------------------------
 class _Notification {
   static const String _notificationRoute =
-      '${ApiEndpoints.baseUrl}/notification';
+      '${ApiEndpoints.baseUrl}/notifications';
   static String markNotificationAsRead(String notificationId) =>
-      '$_notificationRoute/mark-as-read/$notificationId';
+      '$_notificationRoute/$notificationId/read';
   static const String readAllNotifications =
-      '$_notificationRoute/mark-all-as-read';
-  static const String markAllAsRead = '$_notificationRoute/mark-all-as-read';
-  static const String getAllNotifications = '$_notificationRoute/';
+      '$_notificationRoute/read-all';
+  static const String markAllAsRead = '$_notificationRoute/read-all';
+  static const String getAllNotifications = '$_notificationRoute';
+  static const String getUnreadCount = '$_notificationRoute/unread-count';
+  static String deleteNotification(String notificationId) =>
+      '$_notificationRoute/$notificationId';
 }
 
 // ---------------------- Spot -----------------------------

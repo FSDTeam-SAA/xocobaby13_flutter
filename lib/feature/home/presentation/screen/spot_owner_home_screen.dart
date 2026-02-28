@@ -1,11 +1,54 @@
+import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
 import 'package:xocobaby13/feature/spot_owner/presentation/routes/spot_owner_routes.dart';
 
-class SpotOwnerHomeScreen extends StatelessWidget {
+class SpotOwnerHomeScreen extends StatefulWidget {
   const SpotOwnerHomeScreen({super.key});
+
+  @override
+  State<SpotOwnerHomeScreen> createState() => _SpotOwnerHomeScreenState();
+}
+
+class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
+  bool _isLoadingUnread = false;
+  int _unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    if (_isLoadingUnread) return;
+    setState(() => _isLoadingUnread = true);
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.getUnreadNotificationCount,
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      int count = 0;
+      if (data is Map) {
+        count = _readInt(data['unreadCount']);
+      }
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+        _isLoadingUnread = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingUnread = false);
+    }
+  }
 
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -15,6 +58,12 @@ class SpotOwnerHomeScreen extends StatelessWidget {
         duration: const Duration(milliseconds: 1200),
       ),
     );
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.round();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   @override
@@ -83,9 +132,15 @@ class SpotOwnerHomeScreen extends StatelessWidget {
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: () =>
-                      context.push(NotificationRouteNames.notifications),
-                  child: const _SpotOwnerNotificationBell(),
+                  onTap: () async {
+                    await context.push(NotificationRouteNames.notifications);
+                    if (mounted) {
+                      _loadUnreadCount();
+                    }
+                  },
+                  child: _SpotOwnerNotificationBell(
+                    unreadCount: _unreadCount,
+                  ),
                 ),
               ],
             ),
@@ -169,10 +224,13 @@ class _SpotOwnerAvatar extends StatelessWidget {
 }
 
 class _SpotOwnerNotificationBell extends StatelessWidget {
-  const _SpotOwnerNotificationBell();
+  final int unreadCount;
+
+  const _SpotOwnerNotificationBell({this.unreadCount = 0});
 
   @override
   Widget build(BuildContext context) {
+    final String badgeText = unreadCount > 99 ? '99+' : unreadCount.toString();
     return Container(
       width: 46,
       height: 46,
@@ -197,19 +255,31 @@ class _SpotOwnerNotificationBell extends StatelessWidget {
               size: 22,
             ),
           ),
-          Positioned(
-            top: 10,
-            right: 12,
-            child: Container(
-              width: 9,
-              height: 9,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE23A3A),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+          if (unreadCount > 0)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                height: 16,
+                constraints: const BoxConstraints(minWidth: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE23A3A),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: Center(
+                  child: Text(
+                    badgeText,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
