@@ -1,7 +1,4 @@
 import 'package:app_pigeon/app_pigeon.dart';
-import 'package:get/get.dart';
-import 'package:app_pigeon/app_pigeon.dart' hide FormData, MultipartFile;
-import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:image_picker/image_picker.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
@@ -40,6 +37,7 @@ class ProfileController extends GetxController {
   void onInit() {
     super.onInit();
     fetchProfile();
+    loadActivities();
   }
 
   Future<void> fetchProfile() async {
@@ -73,12 +71,6 @@ class ProfileController extends GetxController {
               item.status == selectedActivityStatus.value,
         )
       .toList();
-  }
-
-  @override
-  void onInit() {
-    super.onInit();
-    loadActivities();
   }
 
   Future<void> loadActivities() async {
