@@ -65,17 +65,17 @@ class ActivityCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        const _MetaText(
+                        _MetaText(
                           icon: CupertinoIcons.time,
-                          text: '7:00 AM - 5:00 PM',
+                          text: item.timeRange,
                         ),
                         const SizedBox(height: 8),
                         Row(
                           children: <Widget>[
-                            const Expanded(
+                            Expanded(
                               child: _MetaText(
                                 icon: CupertinoIcons.location,
-                                text: 'Montana, USA',
+                                text: item.location,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -103,11 +103,11 @@ class ActivityCard extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
-                                  const Text(
-                                    'Spot Owner',
+                                  Text(
+                                    item.ownerName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: Color(0xFF1D2A36),
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
@@ -124,7 +124,7 @@ class ActivityCard extends StatelessWidget {
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          '${item.rating} (18 Reviews)',
+                                          '${item.rating} (${item.reviewsCount} Reviews)',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
@@ -154,8 +154,8 @@ class ActivityCard extends StatelessWidget {
                                         fit: BoxFit.scaleDown,
                                         alignment: Alignment.centerLeft,
                                         child: RichText(
-                                          text: const TextSpan(
-                                            text: r'$120',
+                                          text: TextSpan(
+                                            text: '\$${item.pricePerDay}',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w700,
@@ -195,7 +195,15 @@ class ActivityCard extends StatelessWidget {
             child: OutlinedButton(
               onPressed: () {
                 if (useDetailsRoute) {
-                  context.push(HomeRouteNames.details);
+                  final query = <String, String>{};
+                  if (item.spotId != null && item.spotId!.isNotEmpty) {
+                    query['id'] = item.spotId!;
+                  }
+                  final detailsUri = Uri(
+                    path: HomeRouteNames.details,
+                    queryParameters: query.isEmpty ? null : query,
+                  );
+                  context.push(detailsUri.toString());
                   return;
                 }
                 ScaffoldMessenger.of(context).showSnackBar(

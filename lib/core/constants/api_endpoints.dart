@@ -51,7 +51,11 @@ base class ApiEndpoints {
   /// ### get
   static const String getAllNotifications = _Notification.getAllNotifications;
 
-  /// ### post
+  /// ### get
+  static const String getUnreadNotificationCount =
+      _Notification.getUnreadCount;
+
+  /// ### patch
   static const String readAllNotifications = _Notification.readAllNotifications;
 
   /// ### patch
@@ -60,6 +64,10 @@ base class ApiEndpoints {
 
   /// ### patch
   static const String markAllAsRead = _Notification.markAllAsRead;
+
+  /// ### delete
+  static String deleteNotification({required String notificationId}) =>
+      _Notification.deleteNotification(notificationId);
 
   // ---------------------- USER -----------------------------
 
@@ -109,6 +117,7 @@ base class ApiEndpoints {
   static const String filterRide = _Ride.filterRide;
 
   // ---------------------- Booking -----------------------------
+  static const String createBooking = _Booking.createBooking;
   static String getAllBookingsForARide(String rideId) =>
       _Booking.getAllBookingsForARide(rideId);
   static const String getMyBookings = _Booking.getMyBookings;
@@ -145,6 +154,17 @@ base class ApiEndpoints {
   ///////////
   ///
   static String timeExtend(String chatId) => _Message.timeExtend(chatId);
+
+  // ---------------------- Spot -----------------------------
+  /// ### get
+  static const String nearbySpots = _Spot.nearby;
+  static String spotById(String id) => _Spot.byId(id);
+  static const String searchSpots = _Spot.search;
+  static const String recommendedSpots = _Spot.recommended;
+  /// ### post
+  static const String createSpot = _Spot.create;
+  /// ### get
+  static const String ownerSpots = _Spot.ownerSpots;
 
   // ---------------------- LICENSE -----------------------------
   /// ### get
@@ -209,13 +229,27 @@ class _Report {
 // ---------------------- Notification -----------------------------
 class _Notification {
   static const String _notificationRoute =
-      '${ApiEndpoints.baseUrl}/notification';
+      '${ApiEndpoints.baseUrl}/notifications';
   static String markNotificationAsRead(String notificationId) =>
-      '$_notificationRoute/mark-as-read/$notificationId';
+      '$_notificationRoute/$notificationId/read';
   static const String readAllNotifications =
-      '$_notificationRoute/mark-all-as-read';
-  static const String markAllAsRead = '$_notificationRoute/mark-all-as-read';
-  static const String getAllNotifications = '$_notificationRoute/';
+      '$_notificationRoute/read-all';
+  static const String markAllAsRead = '$_notificationRoute/read-all';
+  static const String getAllNotifications = '$_notificationRoute';
+  static const String getUnreadCount = '$_notificationRoute/unread-count';
+  static String deleteNotification(String notificationId) =>
+      '$_notificationRoute/$notificationId';
+}
+
+// ---------------------- Spot -----------------------------
+class _Spot {
+  static const String _spotRoute = '${ApiEndpoints.baseUrl}/spot';
+  static const String nearby = '$_spotRoute/nearby';
+  static String byId(String id) => '$_spotRoute/$id';
+  static const String search = '$_spotRoute/search';
+  static const String recommended = '$_spotRoute/recommended';
+  static const String create = '$_spotRoute';
+  static const String ownerSpots = '$_spotRoute/owner/my-spots';
 }
 
 // ---------------------- USER -----------------------------
@@ -260,7 +294,8 @@ class _Ride {
 }
 
 class _Booking {
-  static const String _bookingRoute = '${ApiEndpoints.baseUrl}/booking';
+  static const String _bookingRoute = '${ApiEndpoints.baseUrl}/bookings';
+  static const String createBooking = _bookingRoute;
   static const String getMyBookings = "$_bookingRoute/my";
   static String getAllBookingsForARide(String rideId) =>
       "$_bookingRoute/ride/$rideId";

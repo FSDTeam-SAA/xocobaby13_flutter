@@ -44,10 +44,8 @@ class ActivityScreen extends StatelessWidget {
 
       final List<Widget> cards = visibleItems
           .map(
-            (ActivityItemModel item) => ActivityCard(
-              item: item,
-              useDetailsRoute: useDetailsRoute,
-            ),
+            (ActivityItemModel item) =>
+                ActivityCard(item: item, useDetailsRoute: useDetailsRoute),
           )
           .toList();
 
@@ -127,7 +125,7 @@ class _BookingTab extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               color: const Color(0xFF1D2A36),
             ),

@@ -1,61 +1,153 @@
+import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/navigation/controller/navigation_controller.dart';
 import 'package:xocobaby13/feature/spot_owner/presentation/routes/spot_owner_routes.dart';
 
-class SpotOwnerEventsScreen extends StatelessWidget {
+class SpotOwnerEventsScreen extends StatefulWidget {
   const SpotOwnerEventsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<_SpotOwnerEventItem> events = <_SpotOwnerEventItem>[
-      const _SpotOwnerEventItem(
-        status: 'Running Now',
-        statusColor: Color(0xFF27AE60),
-        title: 'Crystal Lake Sanctuary',
-        location: 'Montana, USA',
-        type: 'Private Lake',
-        filledSlots: 60,
-        totalSlots: 100,
-        imageUrl:
-            'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80',
-      ),
-      const _SpotOwnerEventItem(
-        status: 'Event Ended',
-        statusColor: Color(0xFFE74C3C),
-        title: 'Crystal Lake Sanctuary',
-        location: 'Montana, USA',
-        type: 'Private Lake',
-        filledSlots: 60,
-        totalSlots: 100,
-        imageUrl:
-            'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=900&q=80',
-      ),
-      const _SpotOwnerEventItem(
-        status: 'Running Now',
-        statusColor: Color(0xFF27AE60),
-        title: 'Crystal Lake Sanctuary',
-        location: 'Montana, USA',
-        type: 'Private Lake',
-        filledSlots: 60,
-        totalSlots: 100,
-        imageUrl:
-            'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80',
-      ),
-      const _SpotOwnerEventItem(
-        status: 'Event Ended',
-        statusColor: Color(0xFFE74C3C),
-        title: 'Crystal Lake Sanctuary',
-        location: 'Montana, USA',
-        type: 'Private Lake',
-        filledSlots: 60,
-        totalSlots: 100,
-        imageUrl:
-            'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80',
-      ),
-    ];
+  State<SpotOwnerEventsScreen> createState() => _SpotOwnerEventsScreenState();
+}
 
+class _SpotOwnerEventsScreenState extends State<SpotOwnerEventsScreen> {
+  bool _isLoading = false;
+  String? _error;
+  List<_SpotOwnerEventItem> _events = const <_SpotOwnerEventItem>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents();
+  }
+
+  String _readString(dynamic value, {String fallback = ''}) {
+    final String text = value?.toString().trim() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
+
+  String _formatLocation(dynamic locationRaw) {
+    if (locationRaw is Map) {
+      final Map<String, dynamic> location =
+          Map<String, dynamic>.from(locationRaw);
+      final String address = _readString(location['address']);
+      final String city = _readString(location['city']);
+      final String country = _readString(location['country']);
+      final List<String> parts = <String>[
+        address,
+        city,
+        country,
+      ].where((String value) => value.isNotEmpty).toList();
+      if (parts.isNotEmpty) {
+        return parts.join(', ');
+      }
+    }
+    return 'Unknown location';
+  }
+
+  String _pickImageUrl(dynamic imagesRaw) {
+    if (imagesRaw is List && imagesRaw.isNotEmpty) {
+      final dynamic first = imagesRaw.first;
+      if (first is Map && first['url'] != null) {
+        return first['url'].toString();
+      }
+      if (first is String) {
+        return first;
+      }
+    }
+    return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80';
+  }
+
+  Map<String, int> _slotStats(dynamic availabilityRaw) {
+    int total = 0;
+    int booked = 0;
+    if (availabilityRaw is List) {
+      for (final dynamic entry in availabilityRaw) {
+        if (entry is Map) {
+          final dynamic slotsRaw = entry['slots'];
+          if (slotsRaw is List) {
+            for (final dynamic slot in slotsRaw) {
+              total += 1;
+              if (slot is Map && slot['isBooked'] == true) {
+                booked += 1;
+              }
+            }
+          }
+        }
+      }
+    }
+    return <String, int>{'total': total, 'booked': booked};
+  }
+
+  _SpotOwnerEventItem _mapSpotToEvent(Map<String, dynamic> spot) {
+    final String id = _readString(spot['_id'] ?? spot['id']);
+    final String statusRaw = _readString(spot['status']).toLowerCase();
+    String status = 'Not Started';
+    Color statusColor = const Color(0xFF6A7B8C);
+    if (statusRaw == 'running') {
+      status = 'Running Now';
+      statusColor = const Color(0xFF27AE60);
+    } else if (statusRaw == 'ended') {
+      status = 'Event Ended';
+      statusColor = const Color(0xFFE74C3C);
+    }
+    final Map<String, int> stats = _slotStats(spot['availability']);
+
+    return _SpotOwnerEventItem(
+      id: id,
+      status: status,
+      statusColor: statusColor,
+      title: _readString(spot['title'], fallback: 'Spot'),
+      location: _formatLocation(spot['location']),
+      type: _readString(spot['type'], fallback: 'Spot'),
+      filledSlots: stats['booked'] ?? 0,
+      totalSlots: stats['total'] ?? 0,
+      imageUrl: _pickImageUrl(spot['images']),
+    );
+  }
+
+  Future<void> _loadEvents() async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.ownerSpots,
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final List<_SpotOwnerEventItem> events = <_SpotOwnerEventItem>[];
+      if (data is List) {
+        for (final dynamic item in data) {
+          if (item is Map) {
+            events.add(_mapSpotToEvent(Map<String, dynamic>.from(item)));
+          }
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _events = events;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Failed to load events';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return SafeArea(
       bottom: false,
       child: SingleChildScrollView(
@@ -98,17 +190,40 @@ class SpotOwnerEventsScreen extends StatelessWidget {
               onTap: () => context.push(SpotOwnerRouteNames.createSpot),
             ),
             const SizedBox(height: 16),
-            Column(
-              children: events
-                  .map(
-                    (_SpotOwnerEventItem event) => _EventCard(
-                      data: event,
-                      onViewDetails: () =>
-                          context.push(SpotOwnerRouteNames.eventDetails),
-                    ),
-                  )
-                  .toList(),
-            ),
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (_error != null)
+              Text(
+                _error ?? 'Failed to load events',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF6A7B8C),
+                ),
+              )
+            else if (_events.isEmpty)
+              const Text(
+                'No events yet',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF6A7B8C),
+                ),
+              )
+            else
+              Column(
+                children: _events
+                    .map(
+                      (_SpotOwnerEventItem event) => _EventCard(
+                        data: event,
+                        onViewDetails: () => context.push(
+                          SpotOwnerRouteNames.eventDetails,
+                          extra: event.id,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
           ],
         ),
       ),
@@ -339,6 +454,7 @@ class _EventCard extends StatelessWidget {
 }
 
 class _SpotOwnerEventItem {
+  final String id;
   final String status;
   final Color statusColor;
   final String title;
@@ -349,6 +465,7 @@ class _SpotOwnerEventItem {
   final String imageUrl;
 
   const _SpotOwnerEventItem({
+    required this.id,
     required this.status,
     required this.statusColor,
     required this.title,

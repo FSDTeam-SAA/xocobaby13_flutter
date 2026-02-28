@@ -1,19 +1,30 @@
+import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 
 class HomeDetailsScreen extends StatefulWidget {
   final bool isBooked;
   final bool showBookingButton;
+  final double? lat;
+  final double? lng;
+  final double? distanceKm;
+  final String? spotId;
 
   const HomeDetailsScreen({
     super.key,
     this.isBooked = false,
     this.showBookingButton = true,
+    this.lat,
+    this.lng,
+    this.distanceKm,
+    this.spotId,
   });
 
   @override
@@ -22,11 +33,126 @@ class HomeDetailsScreen extends StatefulWidget {
 
 class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
   late bool _isBooked;
+  bool _isLoadingSpot = false;
+  String? _spotError;
+  Map<String, dynamic>? _spot;
+  bool _isBooking = false;
+  int _selectedPhotoIndex = 0;
+  static const List<String> _fallbackPhotos = <String>[
+    'https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=400&q=80',
+    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80',
+    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80',
+    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80',
+  ];
+  static const List<String> _fallbackTags = <String>[
+    'Dock',
+    'Kayak',
+    'Rods',
+    'Catfish',
+    'Life Jacket',
+    'License',
+    'Guide',
+    'Parking',
+  ];
+  static const List<String> _monthNames = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
 
   @override
   void initState() {
     super.initState();
     _isBooked = widget.isBooked;
+    _loadSpot();
+  }
+
+  String _formatBookingDate(DateTime value) {
+    final String year = value.year.toString().padLeft(4, '0');
+    final String month = value.month.toString().padLeft(2, '0');
+    final String day = value.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
+  }
+
+  Future<void> _createBooking() async {
+    if (_isBooking) return;
+    final String? spotId = widget.spotId ?? _spot?['_id']?.toString();
+    if (spotId == null || spotId.isEmpty) {
+      _showMessage(context, 'Spot id is missing');
+      return;
+    }
+    setState(() => _isBooking = true);
+    try {
+      final DateTime bookingDate = DateTime.now().add(const Duration(days: 1));
+      final response = await Get.find<AuthorizedPigeon>().post(
+        ApiEndpoints.createBooking,
+        data: <String, dynamic>{
+          'spotId': spotId,
+          'date': _formatBookingDate(bookingDate),
+          'slot': <String, String>{
+            'start': '7:00 AM',
+            'end': '9:00 AM',
+          },
+        },
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final String message =
+          responseBody['message']?.toString() ?? 'Booking created';
+      if (!mounted) return;
+      setState(() => _isBooked = true);
+      _showMessage(context, message);
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage(context, 'Failed to create booking');
+    } finally {
+      if (mounted) {
+        setState(() => _isBooking = false);
+      }
+    }
+  }
+
+  Future<void> _loadSpot() async {
+    final String? spotId = widget.spotId;
+    if (spotId == null || spotId.isEmpty) return;
+    if (_isLoadingSpot) return;
+    setState(() {
+      _isLoadingSpot = true;
+      _spotError = null;
+    });
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.spotById(spotId),
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      if (data is Map) {
+        _spot = Map<String, dynamic>.from(data);
+      }
+      if (!mounted) return;
+      setState(() {
+        _isLoadingSpot = false;
+        _selectedPhotoIndex = 0;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _spotError = 'Failed to load spot details';
+        _isLoadingSpot = false;
+      });
+    }
   }
 
   void _showMessage(BuildContext context, String message) {
@@ -37,6 +163,105 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         duration: const Duration(milliseconds: 1200),
       ),
     );
+  }
+
+  double _zoomForDistance(double? distanceKm) {
+    if (distanceKm == null) return 3.6;
+    if (distanceKm <= 5) return 12;
+    if (distanceKm <= 15) return 10;
+    if (distanceKm <= 30) return 8;
+    if (distanceKm <= 60) return 6;
+    return 4.5;
+  }
+
+  String _readString(dynamic value, {String fallback = ''}) {
+    final String text = value?.toString().trim() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
+
+  int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.round();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  double _readDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  String _formatLocation(dynamic location) {
+    if (location is Map) {
+      final String address = location['address']?.toString() ?? '';
+      final String city = location['city']?.toString() ?? '';
+      final String country = location['country']?.toString() ?? '';
+      final parts = <String>[
+        if (address.isNotEmpty) address,
+        if (city.isNotEmpty) city,
+        if (country.isNotEmpty) country,
+      ];
+      if (parts.isNotEmpty) return parts.join(', ');
+    }
+    return 'Unknown location';
+  }
+
+  String _formatDate(String? value) {
+    if (value == null || value.isEmpty) return 'FEB 10';
+    final DateTime? dateTime = DateTime.tryParse(value);
+    if (dateTime == null) return 'FEB 10';
+    final String month = _monthNames[dateTime.month - 1].toUpperCase();
+    return '$month ${dateTime.day}';
+  }
+
+  String _formatLongDate(String? value) {
+    if (value == null || value.isEmpty) return 'Feb 10, 2026';
+    final DateTime? dateTime = DateTime.tryParse(value);
+    if (dateTime == null) return 'Feb 10, 2026';
+    final String month = _monthNames[dateTime.month - 1];
+    final String day = dateTime.day.toString().padLeft(2, '0');
+    return '$month $day, ${dateTime.year}';
+  }
+
+  List<String> _readImages(dynamic images) {
+    if (images is List) {
+      return images
+          .map((dynamic item) {
+            if (item is String) return item;
+            if (item is Map && item['url'] != null) return item['url'].toString();
+            return '';
+          })
+          .where((String url) => url.isNotEmpty)
+          .toList();
+    }
+    return <String>[];
+  }
+
+  List<String> _readTags(dynamic value) {
+    if (value is List) {
+      return value
+          .map((dynamic item) => item?.toString() ?? '')
+          .where((String item) => item.isNotEmpty)
+          .toList();
+    }
+    return <String>[];
+  }
+
+  LatLng? _readLatLng(dynamic location) {
+    if (location is Map) {
+      final point = location['point'];
+      if (point is Map && point['coordinates'] is List) {
+        final List coords = point['coordinates'] as List;
+        if (coords.length >= 2) {
+          final double lng = _readDouble(coords[0]);
+          final double lat = _readDouble(coords[1]);
+          return LatLng(lat, lng);
+        }
+      }
+    }
+    return null;
   }
 
   void _openCancellationSheet() {
@@ -262,25 +487,55 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> photos = <String>[
-      'https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=400&q=80',
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80',
-      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80',
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80',
-    ];
-
-    const String title = 'Crystal Lake Sanctuary';
-    const LatLng mapCenter = LatLng(39.8283, -98.5795);
+    final Map<String, dynamic>? spot = _spot;
+    final List<String> photos = _readImages(spot?['images']);
+    final List<String> galleryPhotos =
+        photos.isEmpty ? _fallbackPhotos : photos;
+    final int safePhotoIndex = _selectedPhotoIndex.clamp(
+      0,
+      galleryPhotos.isEmpty ? 0 : galleryPhotos.length - 1,
+    );
+    final String title =
+        _readString(spot?['title'], fallback: 'Crystal Lake Sanctuary');
+    final String description = _readString(
+      spot?['description'],
+      fallback:
+          'Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.',
+    );
+    final int price = _readInt(spot?['price']);
+    final double rating = _readDouble(spot?['ratingAvg']);
+    final int reviews = _readInt(spot?['ratingCount']);
+    final String dateLabel = _formatDate(spot?['createdAt']?.toString());
+    final List<String> features = _readTags(spot?['features']);
+    final String hostName =
+        _readString(spot?['owner']?['fullName'], fallback: 'John Mitchell');
+    final String hostAvatar =
+        _readString(spot?['owner']?['avatar']?['url']);
+    final String locationLabel = _formatLocation(spot?['location']);
+    final LatLng? spotLatLng = _readLatLng(spot?['location']);
+    final LatLng mapCenter = spotLatLng ??
+        ((widget.lat != null && widget.lng != null)
+            ? LatLng(widget.lat!, widget.lng!)
+            : const LatLng(39.8283, -98.5795));
     final CameraPosition mapCamera = CameraPosition(
       target: mapCenter,
-      zoom: 3.6,
+      zoom: _zoomForDistance(widget.distanceKm),
     );
     final Set<Marker> mapMarkers = <Marker>{
       Marker(
         markerId: const MarkerId('spot'),
-        position: const LatLng(46.8797, -110.3626),
+        position: mapCenter,
       ),
     };
+
+    if (_isLoadingSpot && spot == null) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF2F9FF),
+        body: SafeArea(
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F9FF),
@@ -315,10 +570,22 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
+                    if (_spotError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          _spotError!,
+                          style: const TextStyle(
+                            color: Color(0xFFE23A3A),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.network(
-                        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
+                        galleryPhotos[safePhotoIndex],
                         height: 310,
                         width: double.infinity,
                         fit: BoxFit.cover,
@@ -343,46 +610,43 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       height: 62,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
-                        itemCount: photos.length,
+                        itemCount: galleryPhotos.length,
                         separatorBuilder: (context, index) =>
                             const SizedBox(width: 8),
                         itemBuilder: (BuildContext context, int index) {
+                          final bool isSelected = index == safePhotoIndex;
                           return Stack(
                             children: <Widget>[
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.network(
-                                  photos[index],
-                                  width: 62,
-                                  height: 62,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() => _selectedPhotoIndex = index);
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    galleryPhotos[index],
                                     width: 62,
                                     height: 62,
-                                    color: const Color(0xFFE2E8F1),
-                                    child: const Icon(Icons.photo, size: 24),
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                      width: 62,
+                                      height: 62,
+                                      color: const Color(0xFFE2E8F1),
+                                      child: const Icon(Icons.photo, size: 24),
+                                    ),
                                   ),
                                 ),
                               ),
-                              if (index == 0)
-                                Positioned(
-                                  top: 4,
-                                  left: 4,
+                              if (isSelected)
+                                Positioned.fill(
                                   child: Container(
-                                    width: 18,
-                                    height: 18,
-                                    alignment: Alignment.center,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFE23A3A),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Text(
-                                      '6+',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: const Color(0xFF1787CF),
+                                        width: 2,
                                       ),
                                     ),
                                   ),
@@ -395,10 +659,10 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     const SizedBox(height: 14),
                     Row(
                       children: <Widget>[
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             title,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF1D2A36),
@@ -415,17 +679,17 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: RichText(
-                            text: const TextSpan(
+                            text: TextSpan(
                               children: <TextSpan>[
                                 TextSpan(
-                                  text: r'$120',
-                                  style: TextStyle(
+                                  text: price > 0 ? '\$$price' : r'$120',
+                                  style: const TextStyle(
                                     color: Color(0xFF1E7CC8),
                                     fontWeight: FontWeight.w700,
                                     fontSize: 15,
                                   ),
                                 ),
-                                TextSpan(
+                                const TextSpan(
                                   text: '/day',
                                   style: TextStyle(
                                     color: Color(0xFF1D2A36),
@@ -441,31 +705,35 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     ),
                     const SizedBox(height: 6),
                     Row(
-                      children: const <Widget>[
-                        Icon(
+                      children: <Widget>[
+                        const Icon(
                           CupertinoIcons.location_solid,
                           size: 13,
                           color: Color(0xFF3A4A5A),
                         ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Montana, USA',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF3A4A5A),
-                            fontWeight: FontWeight.w500,
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            locationLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF3A4A5A),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                        SizedBox(width: 12),
-                        Icon(
+                        const SizedBox(width: 12),
+                        const Icon(
                           CupertinoIcons.calendar,
                           size: 13,
                           color: Color(0xFF3A4A5A),
                         ),
-                        SizedBox(width: 6),
+                        const SizedBox(width: 6),
                         Text(
-                          'Feb 10, 2026',
-                          style: TextStyle(
+                          _formatLongDate(spot?['createdAt']?.toString()),
+                          style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF3A4A5A),
                             fontWeight: FontWeight.w500,
@@ -498,19 +766,19 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Row(
-                      children: const <Widget>[
+                      children: <Widget>[
                         Expanded(
                           child: Row(
                             children: <Widget>[
-                              Icon(
+                              const Icon(
                                 CupertinoIcons.star_fill,
                                 size: 12,
                                 color: Color(0xFFF2B01E),
                               ),
-                              SizedBox(width: 6),
+                              const SizedBox(width: 6),
                               Text(
-                                '4.5',
-                                style: TextStyle(
+                                rating > 0 ? rating.toStringAsFixed(1) : '0.0',
+                                style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF1D2A36),
@@ -519,9 +787,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                             ],
                           ),
                         ),
-                        Expanded(
+                        const Expanded(
                           child: Text(
-                            '7:00 AM - 5:00 PM',
+                            'All day',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 12,
@@ -532,9 +800,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                         ),
                         Expanded(
                           child: Text(
-                            'FEB 10',
+                            dateLabel,
                             textAlign: TextAlign.right,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF1D2A36),
@@ -598,18 +866,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const _TagWrap(
-                      tags: <String>[
-                        'Dock',
-                        'Kayak',
-                        'Rods',
-                        'Catfish',
-                        'Life Jacket',
-                        'License',
-                        'Guide',
-                        'Parking',
-                      ],
-                    ),
+                    _TagWrap(tags: features.isEmpty ? _fallbackTags : features),
                     const SizedBox(height: 14),
                     const Text(
                       'Restriction',
@@ -620,18 +877,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const _TagWrap(
-                      tags: <String>[
-                        'Dock',
-                        'Kayak',
-                        'Rods',
-                        'Catfish',
-                        'Life Jacket',
-                        'License',
-                        'Guide',
-                        'Parking',
-                      ],
-                    ),
+                    _TagWrap(tags: features.isEmpty ? _fallbackTags : features),
                     const SizedBox(height: 14),
                     const Text(
                       'Description',
@@ -642,9 +888,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.',
-                      style: TextStyle(
+                    Text(
+                      description,
+                      style: const TextStyle(
                         height: 1.4,
                         fontSize: 11,
                         color: Color(0xFF3A4A5A),
@@ -662,38 +908,44 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: <Widget>[
-                        const CircleAvatar(
+                        CircleAvatar(
                           radius: 17,
-                          backgroundImage: NetworkImage(
-                            'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
-                          ),
-                          backgroundColor: Color(0xFFE2E8F1),
+                          backgroundImage:
+                              hostAvatar.isNotEmpty ? NetworkImage(hostAvatar) : null,
+                          backgroundColor: const Color(0xFFE2E8F1),
+                          child: hostAvatar.isEmpty
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 18,
+                                  color: Color(0xFF6A7B8C),
+                                )
+                              : null,
                         ),
                         const SizedBox(width: 10),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                'John Mitchell',
-                                style: TextStyle(
+                                hostName,
+                                style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF1D2A36),
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 4),
                               Row(
                                 children: <Widget>[
-                                  Icon(
+                                  const Icon(
                                     CupertinoIcons.star_fill,
                                     size: 11,
                                     color: Color(0xFFF2B01E),
                                   ),
-                                  SizedBox(width: 4),
+                                  const SizedBox(width: 4),
                                   Text(
-                                    '4.5 (18 Reviews)',
-                                    style: TextStyle(
+                                    '${rating.toStringAsFixed(1)} ($reviews Reviews)',
+                                    style: const TextStyle(
                                       fontSize: 10,
                                       color: Color(0xFF6A7B8C),
                                     ),
@@ -737,6 +989,15 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF1D2A36),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      locationLabel,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF6A7B8C),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -836,9 +1097,11 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _isBooked
-                          ? _openCancellationSheet
-                          : () => context.push(HomeRouteNames.payment),
+                      onPressed: _isBooking
+                          ? null
+                          : _isBooked
+                              ? _openCancellationSheet
+                              : _createBooking,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1787CF),
                         elevation: 0,
@@ -846,14 +1109,24 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: Text(
-                        _isBooked ? 'Cancel & Refund' : 'Book Now',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
+                      child: _isBooking
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Text(
+                              _isBooked ? 'Cancel & Refund' : 'Book Now',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
                 ),
