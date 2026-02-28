@@ -68,10 +68,10 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
         queryParams['city'] = _defaultCity;
       }
       if (_defaultMinPrice > 0) {
-        queryParams['minPrice'] = _defaultMinPrice.toString();
+        queryParams['minPrice'] = _defaultMinPrice;
       }
       if (_defaultMaxPrice > 0) {
-        queryParams['maxPrice'] = _defaultMaxPrice.toString();
+        queryParams['maxPrice'] = _defaultMaxPrice;
       }
       if (_defaultFeatures.isNotEmpty) {
         queryParams['features'] = _defaultFeatures.join(',');
