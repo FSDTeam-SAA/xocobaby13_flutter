@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/model/user_profile_data_model.dart';
@@ -20,22 +21,38 @@ class _PersonalDetailsScreenState
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
   late final TextEditingController _descriptionController;
+  late final ProfileController _controller;
+  Worker? _profileWorker;
   late UserProfileDataModel _draft;
 
   @override
   void initState() {
     super.initState();
-    final ProfileController controller = ProfileController.instance();
-    final UserProfileDataModel profile = controller.profile.value;
+    _controller = ProfileController.instance();
+    final UserProfileDataModel profile = _controller.profile.value;
     _draft = profile;
     _nameController = TextEditingController(text: profile.name);
     _emailController = TextEditingController(text: profile.email);
     _phoneController = TextEditingController(text: profile.phone);
     _descriptionController = TextEditingController(text: profile.description);
+
+    _profileWorker = ever<UserProfileDataModel>(
+      _controller.profile,
+      (UserProfileDataModel profile) {
+        if (!mounted) return;
+        _draft = profile;
+        _nameController.text = profile.name;
+        _emailController.text = profile.email;
+        _phoneController.text = profile.phone;
+        _descriptionController.text = profile.description;
+        setState(() {});
+      },
+    );
   }
 
   @override
   void dispose() {
+    _profileWorker?.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -44,34 +61,52 @@ class _PersonalDetailsScreenState
   }
 
   Future<void> _pickAvatar() async {
-    final ProfileController controller = ProfileController.instance();
-    await controller.pickAvatarFromGallery();
+    await _controller.pickAvatarFromGallery();
     setState(() {
-      _draft = controller.profile.value;
+      _draft = _controller.profile.value;
     });
   }
 
-  void _save() {
-    final ProfileController controller = ProfileController.instance();
-    final UserProfileDataModel updated = _draft.copyWith(
-      name: _nameController.text.trim().isEmpty
-          ? _draft.name
-          : _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim(),
-      description: _descriptionController.text.trim(),
+  Future<void> _save() async {
+    final String fullName = _nameController.text.trim().isEmpty
+        ? _draft.name
+        : _nameController.text.trim();
+    final String email = _emailController.text.trim().isEmpty
+        ? _draft.email
+        : _emailController.text.trim();
+    final String phone = _phoneController.text.trim().isEmpty
+        ? _draft.phone
+        : _phoneController.text.trim();
+    final String description = _descriptionController.text.trim();
+
+    final bool success = await _controller.updateProfileRemote(
+      fullName: fullName,
+      email: email,
+      phone: phone,
+      bio: description,
     );
 
-    controller.updateProfile(updated);
-    context.pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Personal details updated.'),
-        margin: const EdgeInsets.all(14),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.black.withValues(alpha: 0.78),
-      ),
-    );
+    if (!mounted) return;
+    if (success) {
+      context.pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Personal details updated.'),
+          margin: const EdgeInsets.all(14),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.black.withValues(alpha: 0.78),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Unable to update profile.'),
+          margin: const EdgeInsets.all(14),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.black.withValues(alpha: 0.78),
+        ),
+      );
+    }
   }
 
   @override
