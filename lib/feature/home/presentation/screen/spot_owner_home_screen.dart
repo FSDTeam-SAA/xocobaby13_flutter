@@ -17,11 +17,15 @@ class SpotOwnerHomeScreen extends StatefulWidget {
 class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
   bool _isLoadingUnread = false;
   int _unreadCount = 0;
+  bool _isLoadingEvents = false;
+  String? _eventsError;
+  List<_SpotOwnerEvent> _runningEvents = const <_SpotOwnerEvent>[];
 
   @override
   void initState() {
     super.initState();
     _loadUnreadCount();
+    _loadRunningEvents();
   }
 
   Future<void> _loadUnreadCount() async {
@@ -66,38 +70,120 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
+  String _readString(dynamic value, {String fallback = ''}) {
+    final String text = value?.toString().trim() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
+
+  String _formatLocation(dynamic locationRaw) {
+    if (locationRaw is Map) {
+      final Map<String, dynamic> location =
+          Map<String, dynamic>.from(locationRaw);
+      final String address = _readString(location['address']);
+      final String city = _readString(location['city']);
+      final String country = _readString(location['country']);
+      final List<String> parts = <String>[
+        address,
+        city,
+        country,
+      ].where((String value) => value.isNotEmpty).toList();
+      if (parts.isNotEmpty) {
+        return parts.join(', ');
+      }
+    }
+    return 'Unknown location';
+  }
+
+  String _pickImageUrl(dynamic imagesRaw) {
+    if (imagesRaw is List && imagesRaw.isNotEmpty) {
+      final dynamic first = imagesRaw.first;
+      if (first is Map && first['url'] != null) {
+        return first['url'].toString();
+      }
+      if (first is String) {
+        return first;
+      }
+    }
+    return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80';
+  }
+
+  Map<String, int> _slotStats(dynamic availabilityRaw) {
+    int total = 0;
+    int booked = 0;
+    if (availabilityRaw is List) {
+      for (final dynamic entry in availabilityRaw) {
+        if (entry is Map) {
+          final dynamic slotsRaw = entry['slots'];
+          if (slotsRaw is List) {
+            for (final dynamic slot in slotsRaw) {
+              total += 1;
+              if (slot is Map && slot['isBooked'] == true) {
+                booked += 1;
+              }
+            }
+          }
+        }
+      }
+    }
+    return <String, int>{'total': total, 'booked': booked};
+  }
+
+  _SpotOwnerEvent _mapSpotToEvent(Map<String, dynamic> spot) {
+    final Map<String, int> stats = _slotStats(spot['availability']);
+    return _SpotOwnerEvent(
+      title: _readString(spot['title'], fallback: 'Spot'),
+      location: _formatLocation(spot['location']),
+      type: _readString(spot['type'], fallback: 'Spot'),
+      slotsFilled: stats['booked'] ?? 0,
+      slotsTotal: stats['total'] ?? 0,
+      imageUrl: _pickImageUrl(spot['images']),
+    );
+  }
+
+  Future<void> _loadRunningEvents() async {
+    if (_isLoadingEvents) return;
+    setState(() {
+      _isLoadingEvents = true;
+      _eventsError = null;
+    });
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.ownerSpots,
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final List<_SpotOwnerEvent> events = <_SpotOwnerEvent>[];
+      if (data is List) {
+        for (final dynamic item in data) {
+          if (item is Map) {
+            final Map<String, dynamic> spot =
+                Map<String, dynamic>.from(item);
+            final String status =
+                _readString(spot['status']).toLowerCase();
+            if (status == 'running') {
+              events.add(_mapSpotToEvent(spot));
+            }
+          }
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _runningEvents = events;
+        _isLoadingEvents = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _eventsError = 'Failed to load events';
+        _isLoadingEvents = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<_SpotOwnerEvent> runningEvents = <_SpotOwnerEvent>[
-      const _SpotOwnerEvent(
-        title: 'Crystal Lake Sanctuary',
-        location: 'Montana, USA',
-        type: 'Private Lake',
-        slotsFilled: 60,
-        slotsTotal: 100,
-        imageUrl:
-            'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80',
-      ),
-      const _SpotOwnerEvent(
-        title: 'Serenity Bay Retreat',
-        location: 'Maine, USA',
-        type: 'Oceanfront',
-        slotsFilled: 80,
-        slotsTotal: 120,
-        imageUrl:
-            'https://images.unsplash.com/photo-1434725039720-aaad6dd32dfe?auto=format&fit=crop&w=900&q=80',
-      ),
-      const _SpotOwnerEvent(
-        title: 'Whispering Pines Lodge',
-        location: 'Colorado, USA',
-        type: 'Mountain Cabin',
-        slotsFilled: 40,
-        slotsTotal: 75,
-        imageUrl:
-            'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=900&q=80',
-      ),
-    ];
-
     return SafeArea(
       bottom: false,
       child: SingleChildScrollView(
@@ -175,17 +261,38 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            Column(
-              children: runningEvents
-                  .map(
-                    (_SpotOwnerEvent event) => _SpotOwnerEventCard(
-                      data: event,
-                      onAnalytics: () =>
-                          context.push(SpotOwnerRouteNames.analytics),
-                    ),
-                  )
-                  .toList(),
-            ),
+            if (_isLoadingEvents)
+              const Center(child: CircularProgressIndicator())
+            else if (_eventsError != null)
+              Text(
+                _eventsError ?? 'Failed to load events',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF6A7B8C),
+                ),
+              )
+            else if (_runningEvents.isEmpty)
+              const Text(
+                'No running events yet',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF6A7B8C),
+                ),
+              )
+            else
+              Column(
+                children: _runningEvents
+                    .map(
+                      (_SpotOwnerEvent event) => _SpotOwnerEventCard(
+                        data: event,
+                        onAnalytics: () =>
+                            context.push(SpotOwnerRouteNames.analytics),
+                      ),
+                    )
+                    .toList(),
+              ),
           ],
         ),
       ),

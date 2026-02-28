@@ -161,6 +161,10 @@ base class ApiEndpoints {
   static String spotById(String id) => _Spot.byId(id);
   static const String searchSpots = _Spot.search;
   static const String recommendedSpots = _Spot.recommended;
+  /// ### post
+  static const String createSpot = _Spot.create;
+  /// ### get
+  static const String ownerSpots = _Spot.ownerSpots;
 
   // ---------------------- LICENSE -----------------------------
   /// ### get
@@ -244,6 +248,8 @@ class _Spot {
   static String byId(String id) => '$_spotRoute/$id';
   static const String search = '$_spotRoute/search';
   static const String recommended = '$_spotRoute/recommended';
+  static const String create = '$_spotRoute';
+  static const String ownerSpots = '$_spotRoute/owner/my-spots';
 }
 
 // ---------------------- USER -----------------------------

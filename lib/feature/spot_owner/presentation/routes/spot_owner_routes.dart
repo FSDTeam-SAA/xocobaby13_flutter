@@ -25,7 +25,9 @@ class SpotOwnerRoutes {
     ),
     GoRoute(
       path: SpotOwnerRouteNames.eventDetails,
-      builder: (context, state) => const SpotOwnerEventDetailsScreen(),
+      builder: (context, state) => SpotOwnerEventDetailsScreen(
+        spotId: state.extra is String ? state.extra as String : null,
+      ),
     ),
   ];
 }

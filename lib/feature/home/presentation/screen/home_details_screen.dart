@@ -37,6 +37,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
   String? _spotError;
   Map<String, dynamic>? _spot;
   bool _isBooking = false;
+  int _selectedPhotoIndex = 0;
   static const List<String> _fallbackPhotos = <String>[
     'https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=400&q=80',
     'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80',
@@ -141,7 +142,10 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         _spot = Map<String, dynamic>.from(data);
       }
       if (!mounted) return;
-      setState(() => _isLoadingSpot = false);
+      setState(() {
+        _isLoadingSpot = false;
+        _selectedPhotoIndex = 0;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -487,6 +491,10 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
     final List<String> photos = _readImages(spot?['images']);
     final List<String> galleryPhotos =
         photos.isEmpty ? _fallbackPhotos : photos;
+    final int safePhotoIndex = _selectedPhotoIndex.clamp(
+      0,
+      galleryPhotos.isEmpty ? 0 : galleryPhotos.length - 1,
+    );
     final String title =
         _readString(spot?['title'], fallback: 'Crystal Lake Sanctuary');
     final String description = _readString(
@@ -577,7 +585,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.network(
-                        galleryPhotos.first,
+                        galleryPhotos[safePhotoIndex],
                         height: 310,
                         width: double.infinity,
                         fit: BoxFit.cover,
@@ -606,42 +614,39 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                         separatorBuilder: (context, index) =>
                             const SizedBox(width: 8),
                         itemBuilder: (BuildContext context, int index) {
+                          final bool isSelected = index == safePhotoIndex;
                           return Stack(
                             children: <Widget>[
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.network(
-                                  galleryPhotos[index],
-                                  width: 62,
-                                  height: 62,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() => _selectedPhotoIndex = index);
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    galleryPhotos[index],
                                     width: 62,
                                     height: 62,
-                                    color: const Color(0xFFE2E8F1),
-                                    child: const Icon(Icons.photo, size: 24),
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                      width: 62,
+                                      height: 62,
+                                      color: const Color(0xFFE2E8F1),
+                                      child: const Icon(Icons.photo, size: 24),
+                                    ),
                                   ),
                                 ),
                               ),
-                              if (index == 0)
-                                Positioned(
-                                  top: 4,
-                                  left: 4,
+                              if (isSelected)
+                                Positioned.fill(
                                   child: Container(
-                                    width: 18,
-                                    height: 18,
-                                    alignment: Alignment.center,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFE23A3A),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Text(
-                                      '6+',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: const Color(0xFF1787CF),
+                                        width: 2,
                                       ),
                                     ),
                                   ),

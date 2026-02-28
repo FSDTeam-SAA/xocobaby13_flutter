@@ -1,6 +1,11 @@
+import 'package:app_pigeon/app_pigeon.dart';
+import 'package:dio/dio.dart' hide FormData, MultipartFile;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart' hide FormData, MultipartFile;
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:xocobaby13/core/constants/api_endpoints.dart';
 
 class SpotOwnerCreateSpotScreen extends StatefulWidget {
   const SpotOwnerCreateSpotScreen({super.key});
@@ -14,6 +19,12 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
   final TextEditingController _pondNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _countryController = TextEditingController();
+  final TextEditingController _latController =
+      TextEditingController(text: '23.8103');
+  final TextEditingController _lngController =
+      TextEditingController(text: '90.4125');
   final TextEditingController _priceController = TextEditingController();
 
   DateTime? _selectedDate;
@@ -24,12 +35,18 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
   String _waterType = 'Pond';
   final Set<String> _facilities = <String>{'Seating Area', 'Fishing Platform'};
   final Set<String> _restrictions = <String>{'waste dumping', 'Commercial filming'};
+  List<XFile> _selectedImages = <XFile>[];
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
     _pondNameController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
+    _cityController.dispose();
+    _countryController.dispose();
+    _latController.dispose();
+    _lngController.dispose();
     _priceController.dispose();
     super.dispose();
   }
@@ -49,7 +66,7 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
     return DateFormat('dd MMM').format(date);
   }
 
-  String _formatTime(TimeOfDay? time) {
+  String _formatDisplayTime(TimeOfDay? time) {
     if (time == null) return '';
     final DateTime date = DateTime(2026, 1, 1, time.hour, time.minute);
     return DateFormat('h:mma').format(date);
@@ -57,7 +74,28 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
 
   String _formatTimeRange() {
     if (_fromTime == null || _toTime == null) return '4:00PM-6:00PM';
-    return '${_formatTime(_fromTime)}-${_formatTime(_toTime)}';
+    return '${_formatDisplayTime(_fromTime)}-${_formatDisplayTime(_toTime)}';
+  }
+
+  String _formatApiDate(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
+
+  String _formatApiTime(TimeOfDay time) {
+    final DateTime date = DateTime(2026, 1, 1, time.hour, time.minute);
+    return DateFormat('hh:mm a').format(date);
+  }
+
+  DateTime _effectiveDate() {
+    return _selectedDate ?? DateTime.now();
+  }
+
+  TimeOfDay _effectiveFromTime() {
+    return _fromTime ?? const TimeOfDay(hour: 16, minute: 0);
+  }
+
+  TimeOfDay _effectiveToTime() {
+    return _toTime ?? const TimeOfDay(hour: 18, minute: 0);
   }
 
 
@@ -96,6 +134,142 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
     });
   }
 
+  Future<void> _pickImages() async {
+    final List<XFile> picked = await ImagePicker().pickMultiImage();
+    if (picked.isEmpty) return;
+    setState(() => _selectedImages = picked);
+  }
+
+  Future<void> _submitSpot() async {
+    if (_isSubmitting) return;
+    final String title = _pondNameController.text.trim();
+    final String description = _descriptionController.text.trim();
+    final String priceInput = _priceController.text.trim();
+    final String address = _locationController.text.trim();
+    final String city = _cityController.text.trim();
+    final String country = _countryController.text.trim();
+    final String latInput = _latController.text.trim();
+    final String lngInput = _lngController.text.trim();
+
+    String cleanNumber(String value) =>
+        value.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    double? parseNumber(String value) =>
+        double.tryParse(cleanNumber(value));
+
+    if (title.isEmpty) {
+      _showMessage('Title is required');
+      return;
+    }
+    if (description.isEmpty) {
+      _showMessage('Description is required');
+      return;
+    }
+    if (priceInput.isEmpty) {
+      _showMessage('Price is required');
+      return;
+    }
+    final double? priceValue = parseNumber(priceInput);
+    if (priceValue == null) {
+      _showMessage('Price must be a number');
+      return;
+    }
+    if (latInput.isEmpty || lngInput.isEmpty) {
+      _showMessage('Latitude and longitude are required');
+      return;
+    }
+    final double? latValue = parseNumber(latInput);
+    final double? lngValue = parseNumber(lngInput);
+    if (latValue == null || lngValue == null) {
+      _showMessage('Latitude/Longitude must be valid numbers');
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final DateTime date = _effectiveDate();
+      final TimeOfDay from = _effectiveFromTime();
+      final TimeOfDay to = _effectiveToTime();
+
+      final FormData formData = FormData();
+      formData.fields.addAll(<MapEntry<String, String>>[
+        MapEntry<String, String>('title', title),
+        MapEntry<String, String>('description', description),
+        MapEntry<String, String>('price', priceValue.toString()),
+        MapEntry<String, String>('address', address),
+        MapEntry<String, String>('city', city),
+        MapEntry<String, String>('country', country),
+        MapEntry<String, String>('lat', latValue.toString()),
+        MapEntry<String, String>('lng', lngValue.toString()),
+        MapEntry<String, String>('availability[0][date]', _formatApiDate(date)),
+        MapEntry<String, String>(
+          'availability[0][slots][0][start]',
+          _formatApiTime(from),
+        ),
+        MapEntry<String, String>(
+          'availability[0][slots][0][end]',
+          _formatApiTime(to),
+        ),
+      ]);
+
+      int index = 0;
+      for (final String facility in _facilities) {
+        formData.fields.add(
+          MapEntry<String, String>('facilities[$index]', facility),
+        );
+        index += 1;
+      }
+
+      index = 0;
+      for (final String restriction in _restrictions) {
+        formData.fields.add(
+          MapEntry<String, String>('restrictions[$index]', restriction),
+        );
+        index += 1;
+      }
+
+      for (final XFile file in _selectedImages) {
+        formData.files.add(
+          MapEntry<String, MultipartFile>(
+            'images',
+            await MultipartFile.fromFile(
+              file.path,
+              filename: file.name,
+            ),
+          ),
+        );
+      }
+
+      final response = await Get.find<AuthorizedPigeon>().post(
+        ApiEndpoints.createSpot,
+        data: formData,
+      );
+      final Map<String, dynamic> responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final String message =
+          responseBody['message']?.toString() ?? 'Spot created';
+      if (!mounted) return;
+      _showMessage(message);
+      Navigator.of(context).pop();
+    } on DioException catch (e) {
+      final responseData = e.response?.data;
+      final String message = responseData is Map && responseData['message'] != null
+          ? responseData['message'].toString()
+          : responseData is String && responseData.isNotEmpty
+          ? responseData
+          : 'Failed to create spot';
+      if (!mounted) return;
+      _showMessage(message);
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage('Failed to create spot');
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,7 +281,7 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: () => _showMessage('Publish Now'),
+            onPressed: _isSubmitting ? null : _submitSpot,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1787CF),
               elevation: 0,
@@ -115,14 +289,23 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: const Text(
-              'Publish Now',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
+            child: _isSubmitting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Publish Now',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -237,6 +420,72 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
                   suffixIcon: CupertinoIcons.location,
                 ),
                 const SizedBox(height: 14),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const _FieldLabel('City'),
+                          const SizedBox(height: 8),
+                          _InputField(
+                            controller: _cityController,
+                            hintText: 'City',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const _FieldLabel('Country'),
+                          const SizedBox(height: 8),
+                          _InputField(
+                            controller: _countryController,
+                            hintText: 'Country',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const _FieldLabel('Latitude'),
+                          const SizedBox(height: 8),
+                          _InputField(
+                            controller: _latController,
+                            hintText: 'Lat',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const _FieldLabel('Longitude'),
+                          const SizedBox(height: 8),
+                          _InputField(
+                            controller: _lngController,
+                            hintText: 'Lng',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
                 const _FieldLabel('Price per day'),
                 const SizedBox(height: 8),
                 _InputField(
@@ -335,7 +584,7 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
                 const _FieldLabel('Add New Files'),
                 const SizedBox(height: 10),
                 GestureDetector(
-                  onTap: () => _showMessage('Upload'),
+                  onTap: _pickImages,
                   child: Container(
                     height: 90,
                     width: double.infinity,
@@ -344,17 +593,19 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFB5D7F7)),
                     ),
-                    child: const Column(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        Icon(
+                        const Icon(
                           CupertinoIcons.cloud_upload,
                           color: Color(0xFF1E7CC8),
                         ),
-                        SizedBox(height: 6),
+                        const SizedBox(height: 6),
                         Text(
-                          'Upload',
-                          style: TextStyle(
+                          _selectedImages.isEmpty
+                              ? 'Upload'
+                              : 'Upload (${_selectedImages.length} selected)',
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF1D2A36),

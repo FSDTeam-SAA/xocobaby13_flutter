@@ -119,19 +119,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   _LiveEvent _mapBookingToLiveEvent(Map<String, dynamic> booking) {
-    final Map<String, dynamic> spot =
-        booking['spot'] is Map ? Map<String, dynamic>.from(booking['spot']) : {};
-    final Map<String, dynamic> owner =
-        booking['owner'] is Map ? Map<String, dynamic>.from(booking['owner']) : {};
-    final Map<String, dynamic> slot =
-        booking['slot'] is Map ? Map<String, dynamic>.from(booking['slot']) : {};
+    final Map<String, dynamic> spot = booking['spot'] is Map
+        ? Map<String, dynamic>.from(booking['spot'])
+        : {};
+    final Map<String, dynamic> owner = booking['owner'] is Map
+        ? Map<String, dynamic>.from(booking['owner'])
+        : {};
+    final Map<String, dynamic> slot = booking['slot'] is Map
+        ? Map<String, dynamic>.from(booking['slot'])
+        : {};
     final String title = _readString(spot['title'], fallback: 'Spot Booking');
     final String location = 'Unknown location';
     final String date = _formatDate(booking['date']?.toString());
     final String time =
         '${_readString(slot['start'], fallback: '00:00')} - ${_readString(slot['end'], fallback: '00:00')}';
-    final String hostName =
-        _readString(owner['fullName'], fallback: 'Spot Owner');
+    final String hostName = _readString(
+      owner['fullName'],
+      fallback: 'Spot Owner',
+    );
     final String hostAvatarUrl = _defaultAttendees.first;
     final String imageUrl = _pickImageUrl(spot['images']).isEmpty
         ? 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80'
@@ -418,6 +423,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<_PopularPlace> popularPlaces = _popularPlaces;
 
     final List<_RecommendedPlace> recommendedPlaces = _recommendedPlaces;
+    final List<_RecommendedPlace> topRecommended =
+        List<_RecommendedPlace>.from(recommendedPlaces)
+          ..sort(
+            (_RecommendedPlace a, _RecommendedPlace b) =>
+                b.rating.compareTo(a.rating),
+          );
+    final List<_RecommendedPlace> displayRecommended =
+        topRecommended.take(4).toList();
 
     return SafeArea(
       bottom: false,
@@ -490,72 +503,70 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _isLoadingLive
                   ? const Center(child: CircularProgressIndicator())
                   : _liveError != null
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Text(
-                                _liveError!,
-                                style: const TextStyle(
-                                  color: Color(0xFF6A7B8C),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextButton(
-                                onPressed: _loadLiveBookings,
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : _liveEvents.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No live bookings',
-                                style: TextStyle(
-                                  color: Color(0xFF6A7B8C),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            )
-                          : PageView.builder(
-                              controller: _liveController,
-                              itemCount: _liveEvents.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                return AnimatedBuilder(
-                                  animation: _liveController,
-                                  child: _LiveEventCard(
-                                    data: _liveEvents[index],
-                                    onStatusTap: () =>
-                                        _handleLiveStatusTap(index),
-                                  ),
-                                  builder: (BuildContext context, Widget? child) {
-                                    double scale = 1;
-                                    double translate = 0;
-                                    if (_liveController.hasClients) {
-                                      final double page =
-                                          _liveController.page ??
-                                          _liveController.initialPage.toDouble();
-                                      final double delta = (page - index).abs();
-                                      scale = (1 - (delta * 0.05))
-                                          .clamp(0.95, 1.0);
-                                      translate = (delta * 6).clamp(0.0, 6.0);
-                                    }
-                                    return Transform.translate(
-                                      offset: Offset(translate, 0),
-                                      child: Transform.scale(
-                                        scale: scale,
-                                        alignment: Alignment.center,
-                                        child: child,
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            _liveError!,
+                            style: const TextStyle(
+                              color: Color(0xFF6A7B8C),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: _loadLiveBookings,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _liveEvents.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No live bookings',
+                        style: TextStyle(
+                          color: Color(0xFF6A7B8C),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  : PageView.builder(
+                      controller: _liveController,
+                      itemCount: _liveEvents.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        return AnimatedBuilder(
+                          animation: _liveController,
+                          child: _LiveEventCard(
+                            data: _liveEvents[index],
+                            onStatusTap: () => _handleLiveStatusTap(index),
+                          ),
+                          builder: (BuildContext context, Widget? child) {
+                            double scale = 1;
+                            double translate = 0;
+                            if (_liveController.hasClients) {
+                              final double page =
+                                  _liveController.page ??
+                                  _liveController.initialPage.toDouble();
+                              final double delta = (page - index).abs();
+                              scale = (1 - (delta * 0.05)).clamp(0.95, 1.0);
+                              translate = (delta * 6).clamp(0.0, 6.0);
+                            }
+                            return Transform.translate(
+                              offset: Offset(translate, 0),
+                              child: Transform.scale(
+                                scale: scale,
+                                alignment: Alignment.center,
+                                child: child,
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
             ),
             const SizedBox(height: 18),
             _SectionHeader(
@@ -565,80 +576,75 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 14),
             SizedBox(
-              height: 560,
+              height: 450,
               child: _isLoadingNearby
                   ? const Center(child: CircularProgressIndicator())
                   : _nearbyError != null
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Text(
-                                _nearbyError!,
-                                style: const TextStyle(
-                                  color: Color(0xFF6A7B8C),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              TextButton(
-                                onPressed: _loadNearbySpots,
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : popularPlaces.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No nearby spots found',
-                                style: TextStyle(
-                                  color: Color(0xFF6A7B8C),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            )
-                          : ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: popularPlaces.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(width: 18),
-                              itemBuilder: (BuildContext context, int index) {
-                                final _PopularPlace place = popularPlaces[index];
-                                return _PopularCard(
-                                  data: place,
-                                  onViewDetails: () {
-                                    final double lat =
-                                        place.lat ?? _nearbyLat;
-                                    final double lng =
-                                        place.lng ?? _nearbyLng;
-                                    final query = <String, String>{
-                                      'lat': lat.toString(),
-                                      'lng': lng.toString(),
-                                      'distanceKm':
-                                          _nearbyDistanceKm.toString(),
-                                    };
-                                    if (place.id != null &&
-                                        place.id!.isNotEmpty) {
-                                      query['id'] = place.id!;
-                                    }
-                                    final detailsUri = Uri(
-                                      path: HomeRouteNames.details,
-                                      queryParameters: query,
-                                    );
-                                    context.push(detailsUri.toString());
-                                  },
-                                );
-                              },
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            _nearbyError!,
+                            style: const TextStyle(
+                              color: Color(0xFF6A7B8C),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextButton(
+                            onPressed: _loadNearbySpots,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : popularPlaces.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No nearby spots found',
+                        style: TextStyle(
+                          color: Color(0xFF6A7B8C),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: popularPlaces.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 18),
+                      itemBuilder: (BuildContext context, int index) {
+                        final _PopularPlace place = popularPlaces[index];
+                        return _PopularCard(
+                          data: place,
+                          onViewDetails: () {
+                            final double lat = place.lat ?? _nearbyLat;
+                            final double lng = place.lng ?? _nearbyLng;
+                            final query = <String, String>{
+                              'lat': lat.toString(),
+                              'lng': lng.toString(),
+                              'distanceKm': _nearbyDistanceKm.toString(),
+                            };
+                            if (place.id != null && place.id!.isNotEmpty) {
+                              query['id'] = place.id!;
+                            }
+                            final detailsUri = Uri(
+                              path: HomeRouteNames.details,
+                              queryParameters: query,
+                            );
+                            context.push(detailsUri.toString());
+                          },
+                        );
+                      },
+                    ),
             ),
             const SizedBox(height: 18),
             _SectionHeader(
               title: 'Recommended',
               actionLabel: 'See all',
-              onActionTap: () => _showMessage(context, 'Recommended'),
+              onActionTap: () => context.push(HomeRouteNames.recommended),
             ),
             const SizedBox(height: 14),
             if (_isLoadingRecommended)
@@ -664,7 +670,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               )
-            else if (recommendedPlaces.isEmpty)
+            else if (displayRecommended.isEmpty)
               const Center(
                 child: Text(
                   'No recommended spots found',
@@ -677,7 +683,7 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             else
               Column(
-                children: recommendedPlaces
+                children: displayRecommended
                     .map(
                       (_RecommendedPlace place) => _RecommendedCard(
                         data: place,
@@ -893,8 +899,9 @@ class _LiveEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String statusLabel = data.isArrived ? 'Check Out' : 'Arrive';
-    final Color statusColor =
-        data.isArrived ? const Color(0xFF111827) : const Color(0xFF1787CF);
+    final Color statusColor = data.isArrived
+        ? const Color(0xFF111827)
+        : const Color(0xFF1787CF);
     return Container(
       width: double.infinity,
       height: 118,
@@ -1114,7 +1121,7 @@ class _PopularCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -1166,7 +1173,7 @@ class _PopularCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Wrap(
                   spacing: 12,
                   runSpacing: 8,
@@ -1210,7 +1217,7 @@ class _PopularCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Wrap(
                   spacing: 14,
                   runSpacing: 8,
@@ -1264,7 +1271,7 @@ class _PopularCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -1291,7 +1298,7 @@ class _PopularCard extends StatelessWidget {
                       )
                       .toList(),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Row(
                   children: <Widget>[
                     _AvatarStack(avatars: data.attendees),
@@ -1321,10 +1328,10 @@ class _PopularCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
-                  height: 44,
+                  height: 34,
                   child: ElevatedButton(
                     onPressed: onViewDetails,
                     style: ElevatedButton.styleFrom(
