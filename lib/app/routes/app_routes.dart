@@ -33,8 +33,27 @@ class AppRouter {
       final bool isAuthed = authStatus is Authenticated;
 
       if (isAuthed) {
-        final String targetNav =
-            _navRouteForRole((authStatus as Authenticated).auth.data['role']);
+        final String role = (authStatus as Authenticated).auth.data['role']
+            ?.toString()
+            .trim() ??
+            '';
+        final String targetNav = _navRouteForRole(role);
+        final bool isSpotOwner = _isSpotOwnerRole(role);
+        final bool isFishermanProfileRoute =
+            location == ProfileRouteNames.home ||
+                location.startsWith('${ProfileRouteNames.home}/');
+        final bool isSpotOwnerProfileRoute =
+            location == SpotOwnerProfileRouteNames.home ||
+                location
+                    .startsWith('${SpotOwnerProfileRouteNames.home}/');
+
+        if (isSpotOwner && isFishermanProfileRoute) {
+          return SpotOwnerProfileRouteNames.home;
+        }
+        if (!isSpotOwner && isSpotOwnerProfileRoute) {
+          return ProfileRouteNames.home;
+        }
+
         if (location == NavigationRouteNames.main &&
             targetNav == NavigationRouteNames.spotOwnerMain) {
           return targetNav;
@@ -95,5 +114,14 @@ class AppRouter {
       return NavigationRouteNames.spotOwnerMain;
     }
     return NavigationRouteNames.main;
+  }
+
+  static bool _isSpotOwnerRole(dynamic rawRole) {
+    final String normalizedRole = (rawRole ?? '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z]'), '');
+    return normalizedRole == 'spotowner';
   }
 }

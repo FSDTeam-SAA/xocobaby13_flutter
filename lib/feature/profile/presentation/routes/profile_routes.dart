@@ -1,10 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_activity_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_edit_profile_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_logout_screen.dart';
-import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_personal_details_screen.dart';
+import 'package:xocobaby13/feature/profile/presentation/screen/personal_details_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_profile_screen.dart';
-import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_update_password_screen.dart';
+import 'package:xocobaby13/feature/profile/presentation/screen/update_password_screen.dart';
 
 class ProfileRouteNames {
   const ProfileRouteNames._();
@@ -31,7 +32,7 @@ class ProfileRoutes {
     ),
     GoRoute(
       path: ProfileRouteNames.personalDetails,
-      builder: (_, _) => const FishermanPersonalDetailsScreen(),
+      builder: (_, _) => const PersonalDetailsScreen(),
     ),
     GoRoute(
       path: ProfileRouteNames.activity,
@@ -39,11 +40,27 @@ class ProfileRoutes {
     ),
     GoRoute(
       path: ProfileRouteNames.updatePassword,
-      builder: (_, _) => const FishermanUpdatePasswordScreen(),
+      builder: (_, _) => const UpdatePasswordScreen(),
     ),
     GoRoute(
       path: ProfileRouteNames.logout,
-      builder: (_, _) => const FishermanLogoutScreen(),
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return CustomTransitionPage<void>(
+          opaque: false,
+          barrierDismissible: true,
+          barrierColor: Colors.black45,
+          transitionDuration: const Duration(milliseconds: 160),
+          child: const FishermanLogoutScreen(),
+          transitionsBuilder: (
+            BuildContext context,
+            Animation<double> animation,
+            Animation<double> secondaryAnimation,
+            Widget child,
+          ) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        );
+      },
     ),
   ];
 }

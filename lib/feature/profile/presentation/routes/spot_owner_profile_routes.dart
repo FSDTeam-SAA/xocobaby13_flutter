@@ -1,12 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_bank_account_success_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_earnings_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_link_bank_account_screen.dart';
-import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_logout_screen.dart';
-import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_personal_details_screen.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_profile_screen.dart';
-import 'package:xocobaby13/feature/profile/presentation/screen/spot_owner_update_password_screen.dart';
+import '../screen/update_password_screen.dart';
+import '../screen/personal_details_screen.dart';
 
 class SpotOwnerProfileRouteNames {
   const SpotOwnerProfileRouteNames._();
@@ -18,7 +16,6 @@ class SpotOwnerProfileRouteNames {
       '/spot-owner/profile/bank-account-success';
   static const String earnings = '/spot-owner/profile/earnings';
   static const String updatePassword = '/spot-owner/profile/update-password';
-  static const String logout = '/spot-owner/profile/logout';
 }
 
 class SpotOwnerProfileRoutes {
@@ -31,7 +28,7 @@ class SpotOwnerProfileRoutes {
     ),
     GoRoute(
       path: SpotOwnerProfileRouteNames.personalDetails,
-      builder: (_, _) => const SpotOwnerPersonalDetailsScreen(),
+      builder: (_, _) => const PersonalDetailsScreen(),
     ),
     GoRoute(
       path: SpotOwnerProfileRouteNames.linkBankAccount,
@@ -47,27 +44,7 @@ class SpotOwnerProfileRoutes {
     ),
     GoRoute(
       path: SpotOwnerProfileRouteNames.updatePassword,
-      builder: (_, _) => const SpotOwnerUpdatePasswordScreen(),
-    ),
-    GoRoute(
-      path: SpotOwnerProfileRouteNames.logout,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return CustomTransitionPage<void>(
-          opaque: false,
-          barrierDismissible: true,
-          barrierColor: Colors.black45,
-          transitionDuration: const Duration(milliseconds: 160),
-          child: const SpotOwnerLogoutScreen(),
-          transitionsBuilder: (
-            BuildContext context,
-            Animation<double> animation,
-            Animation<double> secondaryAnimation,
-            Widget child,
-          ) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        );
-      },
+      builder: (_, _) => const UpdatePasswordScreen(),
     ),
   ];
 }

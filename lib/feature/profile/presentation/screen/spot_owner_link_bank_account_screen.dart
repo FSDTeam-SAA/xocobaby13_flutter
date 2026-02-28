@@ -40,14 +40,14 @@ class _SpotOwnerLinkBankAccountScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   SpotOwnerProfileTextField(
                     label: 'Account Number',
                     controller: _accountController,
                     hint: '•••• •••• ••••',
                     keyboardType: TextInputType.number,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   SpotOwnerProfileTextField(
                     label: 'Routing Number',
                     controller: _routingController,
@@ -61,7 +61,7 @@ class _SpotOwnerLinkBankAccountScreenState
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            height: 40,
+            height: 44,
             child: ElevatedButton(
               onPressed: _submit,
               style: ElevatedButton.styleFrom(
@@ -69,12 +69,12 @@ class _SpotOwnerLinkBankAccountScreenState
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
               child: const Text(
                 'Submit',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
             ),
           ),
