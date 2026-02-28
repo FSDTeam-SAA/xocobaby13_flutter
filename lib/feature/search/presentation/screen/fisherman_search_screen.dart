@@ -61,15 +61,24 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
       _error = null;
     });
     try {
+      final Map<String, dynamic> queryParams = <String, dynamic>{
+        'q': _query,
+      };
+      if (_defaultCity.isNotEmpty) {
+        queryParams['city'] = _defaultCity;
+      }
+      if (_defaultMinPrice > 0) {
+        queryParams['minPrice'] = _defaultMinPrice.toString();
+      }
+      if (_defaultMaxPrice > 0) {
+        queryParams['maxPrice'] = _defaultMaxPrice.toString();
+      }
+      if (_defaultFeatures.isNotEmpty) {
+        queryParams['features'] = _defaultFeatures.join(',');
+      }
       final response = await Get.find<AuthorizedPigeon>().get(
         ApiEndpoints.searchSpots,
-        queryParameters: <String, dynamic>{
-          'q': _query,
-          'city': _defaultCity,
-          'minPrice': _defaultMinPrice,
-          'maxPrice': _defaultMaxPrice,
-          'features': _defaultFeatures.join(','),
-        },
+        queryParameters: queryParams,
       );
       final responseBody = response.data is Map
           ? Map<String, dynamic>.from(response.data as Map)

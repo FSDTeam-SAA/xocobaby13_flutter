@@ -423,14 +423,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<_PopularPlace> popularPlaces = _popularPlaces;
 
     final List<_RecommendedPlace> recommendedPlaces = _recommendedPlaces;
-    final List<_RecommendedPlace> topRecommended =
-        List<_RecommendedPlace>.from(recommendedPlaces)
-          ..sort(
-            (_RecommendedPlace a, _RecommendedPlace b) =>
-                b.rating.compareTo(a.rating),
-          );
-    final List<_RecommendedPlace> displayRecommended =
-        topRecommended.take(4).toList();
 
     return SafeArea(
       bottom: false,
@@ -670,7 +662,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               )
-            else if (displayRecommended.isEmpty)
+            else if (recommendedPlaces.isEmpty)
               const Center(
                 child: Text(
                   'No recommended spots found',
@@ -683,7 +675,7 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             else
               Column(
-                children: displayRecommended
+                children: recommendedPlaces
                     .map(
                       (_RecommendedPlace place) => _RecommendedCard(
                         data: place,

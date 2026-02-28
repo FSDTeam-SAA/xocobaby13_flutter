@@ -1,4 +1,4 @@
-enum ActivityStatusModel { ongoing, upcoming, completed }
+enum ActivityStatusModel { ongoing, upcoming, completed, canceled }
 
 extension ActivityStatusModelLabel on ActivityStatusModel {
   String get label {
@@ -9,6 +9,8 @@ extension ActivityStatusModelLabel on ActivityStatusModel {
         return 'Upcoming';
       case ActivityStatusModel.completed:
         return 'Completed';
+      case ActivityStatusModel.canceled:
+        return 'Canceled';
     }
   }
 }

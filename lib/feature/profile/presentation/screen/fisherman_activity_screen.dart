@@ -37,7 +37,7 @@ class FishermanActivityScreen extends StatelessWidget {
                         Text(
                           status.label,
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: selected
                                 ? FontWeight.w700
                                 : FontWeight.w500,
