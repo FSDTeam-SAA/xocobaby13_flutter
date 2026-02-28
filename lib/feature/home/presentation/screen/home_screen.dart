@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
 import 'package:xocobaby13/feature/search/presentation/routes/search_routes.dart';
+import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
+import 'package:xocobaby13/feature/profile/model/user_profile_data_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -431,43 +433,46 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Row(
-              children: <Widget>[
-                const _ProfileAvatar(
-                  imageUrl:
-                      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
-                ),
-                const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Good Morning',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF3A4A5A)),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Hello, Mack',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1D2A36),
+            Obx(() {
+              final UserProfileDataModel profile =
+                  ProfileController.instance().profile.value;
+              final String name =
+                  profile.name.trim().isEmpty ? 'Mack' : profile.name.trim();
+              return Row(
+                children: <Widget>[
+                  _ProfileAvatar(imageProvider: profile.avatarImageProvider),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Good Morning',
+                        style: TextStyle(fontSize: 14, color: Color(0xFF3A4A5A)),
                       ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () async {
-                    await context.push(NotificationRouteNames.notifications);
-                    if (mounted) {
-                      _loadUnreadCount();
-                    }
-                  },
-                  child: _NotificationBell(unreadCount: _unreadCount),
-                ),
-              ],
-            ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Hello, $name',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1D2A36),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () async {
+                      await context.push(NotificationRouteNames.notifications);
+                      if (mounted) {
+                        _loadUnreadCount();
+                      }
+                    },
+                    child: _NotificationBell(unreadCount: _unreadCount),
+                  ),
+                ],
+              );
+            }),
             const SizedBox(height: 20),
             const Text(
               'Ready to fish today?',
@@ -707,9 +712,9 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _ProfileAvatar extends StatelessWidget {
-  final String imageUrl;
+  final ImageProvider imageProvider;
 
-  const _ProfileAvatar({required this.imageUrl});
+  const _ProfileAvatar({required this.imageProvider});
 
   @override
   Widget build(BuildContext context) {
@@ -727,7 +732,7 @@ class _ProfileAvatar extends StatelessWidget {
           ),
         ],
         image: DecorationImage(
-          image: NetworkImage(imageUrl),
+          image: imageProvider,
           fit: BoxFit.cover,
           onError: (_, __) {},
         ),
