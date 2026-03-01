@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class FishermanSearchScreen extends StatefulWidget {
   const FishermanSearchScreen({super.key});
@@ -27,10 +28,7 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
   static const String _defaultCity = 'Dhaka';
   static const int _defaultMinPrice = 500;
   static const int _defaultMaxPrice = 2000;
-  static const List<String> _defaultFeatures = <String>[
-    'fishing',
-    'parking',
-  ];
+  static const List<String> _defaultFeatures = <String>['fishing', 'parking'];
 
   @override
   void dispose() {
@@ -61,9 +59,7 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
       _error = null;
     });
     try {
-      final Map<String, dynamic> queryParams = <String, dynamic>{
-        'q': _query,
-      };
+      final Map<String, dynamic> queryParams = <String, dynamic>{'q': _query};
       if (_defaultCity.isNotEmpty) {
         queryParams['city'] = _defaultCity;
       }
@@ -139,64 +135,63 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _error != null
-                          ? Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  Text(
-                                    _error!,
-                                    style: const TextStyle(
-                                      color: Color(0xFF6A7B8C),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  TextButton(
-                                    onPressed: _searchSpots,
-                                    child: const Text('Retry'),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : _results.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'No results found',
-                                    style: TextStyle(
-                                      color: Color(0xFF6A7B8C),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                )
-                              : ListView.separated(
-                                  itemCount: _results.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 14),
-                                  itemBuilder: (BuildContext context, int index) {
-                                    final _SpotSearchResult spot =
-                                        _results[index];
-                                    return _SearchResultRow(
-                                      title: spot.title,
-                                      subtitle: spot.location,
-                                      price: spot.price,
-                                      onTap: () {
-                                        final query = <String, String>{
-                                          'lat': spot.lat.toString(),
-                                          'lng': spot.lng.toString(),
-                                          'distanceKm': '15',
-                                          'id': spot.id,
-                                        };
-                                        final detailsUri = Uri(
-                                          path: HomeRouteNames.details,
-                                          queryParameters: query,
-                                        );
-                                        context.push(detailsUri.toString());
-                                      },
-                                    );
-                                  },
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                _error!,
+                                style: const TextStyle(
+                                  color: Color(0xFF6A7B8C),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
                                 ),
+                              ),
+                              const SizedBox(height: 10),
+                              AppTextButton(
+                                onPressed: _searchSpots,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _results.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No results found',
+                            style: TextStyle(
+                              color: Color(0xFF6A7B8C),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: _results.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 14),
+                          itemBuilder: (BuildContext context, int index) {
+                            final _SpotSearchResult spot = _results[index];
+                            return _SearchResultRow(
+                              title: spot.title,
+                              subtitle: spot.location,
+                              price: spot.price,
+                              onTap: () {
+                                final query = <String, String>{
+                                  'lat': spot.lat.toString(),
+                                  'lng': spot.lng.toString(),
+                                  'distanceKm': '15',
+                                  'id': spot.id,
+                                };
+                                final detailsUri = Uri(
+                                  path: HomeRouteNames.details,
+                                  queryParameters: query,
+                                );
+                                context.push(detailsUri.toString());
+                              },
+                            );
+                          },
+                        ),
                 ),
               ],
             ),

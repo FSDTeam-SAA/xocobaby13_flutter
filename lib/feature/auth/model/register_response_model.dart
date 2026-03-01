@@ -20,10 +20,7 @@ class RegisterResponseModel {
   }
 
   Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{
-      'success': success,
-      'message': message,
-    };
+    final map = <String, dynamic>{'success': success, 'message': message};
     if (data != null) map['data'] = data!.toJson();
     return map;
   }

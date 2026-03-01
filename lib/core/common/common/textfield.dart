@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../theme/app_gap.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class LabeledDropdown extends StatelessWidget {
   final String? title;
@@ -276,7 +277,7 @@ class _LabeledTextFieldState extends State<LabeledTextField> {
 
               // 👇 Password Toggle
               suffixIcon: widget.isPassword
-                  ? IconButton(
+                  ? AppIconButton(
                       icon: Icon(
                         _obscureText ? Icons.visibility_off : Icons.visibility,
                         color: Colors.grey,

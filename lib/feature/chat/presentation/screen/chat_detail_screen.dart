@@ -1,11 +1,20 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:app_pigeon/app_pigeon.dart';
+import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/feature/chat/model/chat_api_mapper.dart';
 import 'package:xocobaby13/feature/chat/model/chat_message_model.dart';
-import 'package:xocobaby13/feature/chat/model/chat_sample_data.dart';
 import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_bubble.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_dialogs.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_input_bar.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_style.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 enum _ChatMenuAction { report, block }
 
@@ -21,39 +30,550 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _composerController = TextEditingController();
-  late List<ChatMessageModel> _messages;
+  List<ChatMessageModel> _messages = <ChatMessageModel>[];
+  bool _isLoading = false;
+  String? _loadError;
+  String _currentUserId = '';
+  String _otherUserId = '';
+  bool _isBlocked = false;
+  bool _isSending = false;
+  String _currentUserAvatarUrl = '';
+  bool _socketInitialized = false;
+  StreamSubscription<dynamic>? _newMessageSub;
+  StreamSubscription<dynamic>? _updateMessageSub;
+  StreamSubscription<dynamic>? _deleteMessageSub;
+  StreamSubscription<dynamic>? _connectSub;
+  final ImagePicker _imagePicker = ImagePicker();
+  final List<XFile> _pendingImages = <XFile>[];
 
   @override
   void initState() {
     super.initState();
-    _messages = ChatSampleData.messagesForThread(widget.thread);
+    _loadMessages();
   }
 
   @override
   void dispose() {
+    _connectSub?.cancel();
+    _newMessageSub?.cancel();
+    _updateMessageSub?.cancel();
+    _deleteMessageSub?.cancel();
     _scrollController.dispose();
     _composerController.dispose();
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final String text = _composerController.text.trim();
-    if (text.isEmpty) {
+    if (_isSending) {
       return;
     }
+    if (text.isEmpty && _pendingImages.isEmpty) {
+      return;
+    }
+    setState(() => _isSending = true);
+    try {
+      final response = _pendingImages.isNotEmpty
+          ? await _sendMultipartMessage(text)
+          : await Get.find<AuthorizedPigeon>().post(
+              ApiEndpoints.sendMessage,
+              data: <String, dynamic>{'chatId': widget.thread.id, 'text': text},
+            );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final List<ChatMessageModel> newMessages = data is List && data.isNotEmpty
+          ? ChatApiMapper.messagesFromList(data, _currentUserId)
+          : <ChatMessageModel>[];
+      if (!mounted) return;
+      if (newMessages.isNotEmpty) {
+        _mergeMessages(newMessages);
+      }
+      _composerController.clear();
+      if (_pendingImages.isNotEmpty) {
+        _pendingImages.clear();
+      }
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        _showMessage('Failed to send message');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
+  }
+
+  Future<void> _loadMessages() async {
+    if (_isLoading) return;
     setState(() {
-      _messages = <ChatMessageModel>[
-        ..._messages,
-        ChatMessageModel(
-          id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-          text: text,
-          isMe: true,
-          timestamp: DateTime.now(),
-        ),
-      ];
+      _isLoading = true;
+      _loadError = null;
     });
-    _composerController.clear();
+    try {
+      _currentUserId = await _resolveCurrentUserId();
+      await _initSocketIfNeeded();
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.getSingleChat(widget.thread.id),
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final Map<String, dynamic> chat = data is Map
+          ? Map<String, dynamic>.from(data)
+          : <String, dynamic>{};
+      final List<ChatMessageModel> messages = ChatApiMapper.messagesFromChat(
+        chat,
+        _currentUserId,
+      );
+      final String otherUserId = widget.thread.otherUserId.isNotEmpty
+          ? widget.thread.otherUserId
+          : ChatApiMapper.otherUserIdFromChat(chat, _currentUserId);
+      if (!mounted) return;
+      setState(() {
+        _messages = messages;
+        _otherUserId = otherUserId;
+        _isLoading = false;
+      });
+      await _loadBlockedStatus(otherUserId);
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = 'Failed to load messages';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<String> _resolveCurrentUserId() async {
+    try {
+      final authRecord = await Get.find<AuthorizedPigeon>()
+          .getCurrentAuthRecord();
+      final Map<String, dynamic> data = authRecord?.data is Map
+          ? Map<String, dynamic>.from(authRecord!.data as Map)
+          : <String, dynamic>{};
+      final dynamic raw = authRecord?.toJson();
+      final Map<String, dynamic> record = raw is Map
+          ? Map<String, dynamic>.from(raw as Map)
+          : <String, dynamic>{};
+      return _pickFirstString(<dynamic>[
+        data['id'],
+        data['_id'],
+        data['userId'],
+        record['uid'],
+        record['userId'],
+        record['user_id'],
+        record['id'],
+        record['_id'],
+      ]);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _pickFirstString(List<dynamic> values) {
+    for (final dynamic value in values) {
+      final String text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty) {
+        return text;
+      }
+    }
+    return '';
+  }
+
+  Future<void> _initSocketIfNeeded() async {
+    if (_socketInitialized || _currentUserId.isEmpty) {
+      return;
+    }
+    final pigeon = Get.find<AuthorizedPigeon>();
+    await pigeon.socketInit(
+      SocketConnetParamX(
+        token: null,
+        socketUrl: ApiEndpoints.socketUrl,
+        joinId: _currentUserId,
+      ),
+    );
+    _connectSub = pigeon.listen('connect').listen((_) {
+      pigeon.emit('joinChatRoom', _currentUserId);
+    });
+    pigeon.emit('joinChatRoom', _currentUserId);
+    _newMessageSub = pigeon.listen('newMessage').listen(_handleNewMessageEvent);
+    _updateMessageSub = pigeon
+        .listen('messageUpdated')
+        .listen(_handleMessageUpdatedEvent);
+    _deleteMessageSub = pigeon
+        .listen('messageDeleted')
+        .listen(_handleMessageDeletedEvent);
+    _socketInitialized = true;
+  }
+
+  void _handleNewMessageEvent(dynamic payload) {
+    final Map<String, dynamic> data = _asMap(payload);
+    final String chatId = data['chatId']?.toString() ?? '';
+    if (chatId != widget.thread.id) {
+      return;
+    }
+    final dynamic messageRaw = data['message'];
+    if (messageRaw is! Map) {
+      return;
+    }
+    final ChatMessageModel message = ChatApiMapper.messageFromMap(
+      Map<String, dynamic>.from(messageRaw),
+      _currentUserId,
+    );
+    if (!mounted) return;
+    _mergeMessages(<ChatMessageModel>[message]);
     _scrollToBottom();
+  }
+
+  void _handleMessageUpdatedEvent(dynamic payload) {
+    final Map<String, dynamic> data = _asMap(payload);
+    final String chatId = data['chatId']?.toString() ?? '';
+    if (chatId != widget.thread.id) {
+      return;
+    }
+    final dynamic messageRaw = data['message'];
+    if (messageRaw is! Map) {
+      return;
+    }
+    final ChatMessageModel message = ChatApiMapper.messageFromMap(
+      Map<String, dynamic>.from(messageRaw),
+      _currentUserId,
+    );
+    if (!mounted) return;
+    _mergeMessages(<ChatMessageModel>[message]);
+  }
+
+  void _handleMessageDeletedEvent(dynamic payload) {
+    final Map<String, dynamic> data = _asMap(payload);
+    final String chatId = data['chatId']?.toString() ?? '';
+    if (chatId != widget.thread.id) {
+      return;
+    }
+    final String messageId = data['messageId']?.toString() ?? '';
+    if (messageId.isEmpty) return;
+    if (!mounted) return;
+    _removeMessage(messageId);
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    return <String, dynamic>{};
+  }
+
+  void _mergeMessages(List<ChatMessageModel> incoming) {
+    if (incoming.isEmpty) return;
+    final List<ChatMessageModel> updated = List<ChatMessageModel>.from(
+      _messages,
+    );
+    for (final ChatMessageModel message in incoming) {
+      final int index = updated.indexWhere((m) => m.id == message.id);
+      if (index == -1) {
+        updated.add(message);
+      } else {
+        updated[index] = message;
+      }
+    }
+    updated.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    setState(() => _messages = updated);
+  }
+
+  void _removeMessage(String messageId) {
+    final List<ChatMessageModel> updated = _messages
+        .where((m) => m.id != messageId)
+        .toList();
+    setState(() => _messages = updated);
+  }
+
+  Future<void> _loadBlockedStatus(String otherUserId) async {
+    if (otherUserId.isEmpty) return;
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.getCurrentProfile,
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      if (data is Map) {
+        final String avatarUrl = data['avatar'] is Map
+            ? data['avatar']['url']?.toString() ?? ''
+            : '';
+        final blockedUsers = data['blockedUsers'];
+        if (blockedUsers is List) {
+          final bool isBlocked = blockedUsers.any(
+            (dynamic id) => id?.toString() == otherUserId,
+          );
+          if (mounted) {
+            setState(() => _isBlocked = isBlocked);
+          }
+        }
+        if (mounted && avatarUrl.isNotEmpty) {
+          setState(() => _currentUserAvatarUrl = avatarUrl);
+        }
+      }
+    } catch (_) {
+      // Ignore block status load errors.
+    }
+  }
+
+  Future<bool> _createReport(String reason) async {
+    if (_otherUserId.isEmpty) {
+      _showMessage('Unable to report this user');
+      return false;
+    }
+    try {
+      await Get.find<AuthorizedPigeon>().post(
+        ApiEndpoints.sendReport,
+        data: <String, dynamic>{
+          'reportedUser': _otherUserId,
+          'reason': reason,
+          'chatId': widget.thread.id,
+        },
+      );
+      return true;
+    } catch (_) {
+      _showMessage('Failed to submit report');
+      return false;
+    }
+  }
+
+  Future<bool?> _toggleBlockStatus() async {
+    if (_otherUserId.isEmpty) {
+      _showMessage('Unable to update block status');
+      return null;
+    }
+    try {
+      if (_isBlocked) {
+        await Get.find<AuthorizedPigeon>().patch(
+          ApiEndpoints.unblockUser(_otherUserId),
+        );
+        if (mounted) {
+          setState(() => _isBlocked = false);
+        }
+        return false;
+      }
+      await Get.find<AuthorizedPigeon>().patch(
+        ApiEndpoints.blockUser(_otherUserId),
+      );
+      if (mounted) {
+        setState(() => _isBlocked = true);
+      }
+      return true;
+    } catch (_) {
+      _showMessage('Failed to update block status');
+      return null;
+    }
+  }
+
+  Future<void> _showMessageActions(ChatMessageModel message) async {
+    final bool canEdit = message.isMe && message.type == 'text';
+    final String? action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (canEdit)
+                ListTile(
+                  title: const Text(
+                    'Edit message',
+                    style: TextStyle(
+                      color: ChatPalette.titleText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onTap: () => Navigator.of(context).pop('edit'),
+                ),
+              ListTile(
+                title: const Text(
+                  'Delete message',
+                  style: TextStyle(
+                    color: ChatPalette.dangerRed,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onTap: () => Navigator.of(context).pop('delete'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (action == 'edit') {
+      await _showEditMessageDialog(message);
+    } else if (action == 'delete') {
+      await _deleteMessage(message);
+    }
+  }
+
+  Future<void> _showEditMessageDialog(ChatMessageModel message) async {
+    final TextEditingController controller = TextEditingController(
+      text: message.text,
+    );
+    final String? updatedText = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit message'),
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            decoration: const InputDecoration(border: OutlineInputBorder()),
+          ),
+          actions: <Widget>[
+            AppTextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            AppTextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(controller.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    if (updatedText == null || updatedText.trim().isEmpty) {
+      return;
+    }
+    await _updateMessage(message, updatedText.trim());
+  }
+
+  Future<void> _updateMessage(ChatMessageModel message, String newText) async {
+    try {
+      final response = await Get.find<AuthorizedPigeon>().patch(
+        ApiEndpoints.updateMessage,
+        data: <String, dynamic>{
+          'chatId': widget.thread.id,
+          'messageId': message.id,
+          'newText': newText,
+        },
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      if (data is Map) {
+        final ChatMessageModel updated = ChatApiMapper.messageFromMap(
+          Map<String, dynamic>.from(data),
+          _currentUserId,
+        );
+        if (!mounted) return;
+        _mergeMessages(<ChatMessageModel>[updated]);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('Failed to update message');
+      }
+    }
+  }
+
+  Future<void> _deleteMessage(ChatMessageModel message) async {
+    try {
+      await Get.find<AuthorizedPigeon>().delete(
+        ApiEndpoints.deleteMessage,
+        data: <String, dynamic>{
+          'chatId': widget.thread.id,
+          'messageId': message.id,
+        },
+      );
+      if (!mounted) return;
+      _removeMessage(message.id);
+    } catch (_) {
+      if (mounted) {
+        _showMessage('Failed to delete message');
+      }
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(milliseconds: 1200),
+      ),
+    );
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> selected = await _imagePicker.pickMultiImage();
+      if (selected.isEmpty) return;
+      final Set<String> existingPaths = _pendingImages
+          .map((e) => e.path)
+          .toSet();
+      final List<XFile> uniqueNew = <XFile>[];
+      for (final XFile file in selected) {
+        if (existingPaths.add(file.path)) {
+          uniqueNew.add(file);
+        }
+      }
+      if (uniqueNew.isEmpty) {
+        _showMessage('Image already selected');
+        return;
+      }
+      setState(() {
+        _pendingImages.addAll(uniqueNew);
+        if (_pendingImages.length > 5) {
+          _pendingImages.removeRange(5, _pendingImages.length);
+        }
+      });
+      if (_pendingImages.length >= 5) {
+        _showMessage('Only 5 images can be selected');
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('Failed to pick image');
+      }
+    }
+  }
+
+  void _removePendingImage(int index) {
+    if (index < 0 || index >= _pendingImages.length) return;
+    setState(() {
+      _pendingImages.removeAt(index);
+    });
+  }
+
+  Future<dio.Response<dynamic>> _sendMultipartMessage(String text) async {
+    final List<XFile> filesToSend = _pendingImages.length > 5
+        ? _pendingImages.take(5).toList()
+        : List<XFile>.from(_pendingImages);
+    if (_pendingImages.length > 5) {
+      _showMessage('Only 5 images can be sent at a time');
+    }
+    final List<dio.MultipartFile> files = <dio.MultipartFile>[];
+    for (final XFile file in filesToSend) {
+      files.add(
+        await dio.MultipartFile.fromFile(file.path, filename: file.name),
+      );
+    }
+    final formData = dio.FormData.fromMap(<String, dynamic>{
+      'chatId': widget.thread.id,
+      'text': text,
+      'files': files,
+    });
+    return Get.find<AuthorizedPigeon>().post(
+      ApiEndpoints.sendMessage,
+      data: formData,
+      options: dio.Options(contentType: 'multipart/form-data'),
+    );
   }
 
   void _scrollToBottom() {
@@ -74,11 +594,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       case _ChatMenuAction.report:
         await ChatDialogs.showReportReasonSheet(
           context: context,
-          onReasonSelected: (_) async {
+          onReasonSelected: (String reason) async {
             await ChatDialogs.showReportDoneDialog(
               context: context,
               onReportSpotOwner: () async {
-                await ChatDialogs.showReportCompletedDialog(context: context);
+                final bool didReport = await _createReport(reason);
+                if (!mounted) return;
+                if (didReport) {
+                  await ChatDialogs.showReportCompletedDialog(context: context);
+                }
               },
             );
           },
@@ -89,7 +613,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           context: context,
         );
         if (confirmed == true && mounted) {
-          await ChatDialogs.showBlockDoneDialog(context: context);
+          final bool? blocked = await _toggleBlockStatus();
+          if (!mounted || blocked == null) {
+            return;
+          }
+          if (blocked) {
+            await ChatDialogs.showBlockDoneDialog(context: context);
+          } else {
+            _showMessage('User unblocked');
+          }
         }
         return;
     }
@@ -101,7 +633,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
-          Flexible(child: ChatBubble(text: message.text, isMe: true)),
+          Flexible(
+            child: GestureDetector(
+              onLongPress: message.type == 'text'
+                  ? () => _showMessageActions(message)
+                  : null,
+              child: _buildMessageContent(message),
+            ),
+          ),
           const SizedBox(width: 6),
           Container(
             width: 6,
@@ -110,6 +649,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               color: ChatPalette.statusDot,
               shape: BoxShape.circle,
             ),
+          ),
+          const SizedBox(width: 6),
+          CircleAvatar(
+            radius: 8,
+            backgroundColor: ChatPalette.actionBlue,
+            backgroundImage: _currentUserAvatarUrl.isNotEmpty
+                ? NetworkImage(_currentUserAvatarUrl)
+                : null,
+            child: _currentUserAvatarUrl.isEmpty
+                ? const Text(
+                    'ME',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 6,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  )
+                : null,
           ),
         ],
       );
@@ -121,10 +679,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         CircleAvatar(
           radius: 8,
           backgroundColor: widget.thread.avatarColor,
-          backgroundImage: widget.thread.avatarAssetPath.isNotEmpty
+          backgroundImage: widget.thread.avatarUrl.isNotEmpty
+              ? NetworkImage(widget.thread.avatarUrl)
+              : widget.thread.avatarAssetPath.isNotEmpty
               ? AssetImage(widget.thread.avatarAssetPath)
               : null,
-          child: widget.thread.avatarAssetPath.isEmpty
+          child:
+              widget.thread.avatarUrl.isEmpty &&
+                  widget.thread.avatarAssetPath.isEmpty
               ? Text(
                   widget.thread.avatarLabel,
                   style: const TextStyle(
@@ -136,8 +698,61 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               : null,
         ),
         const SizedBox(width: 6),
-        Flexible(child: ChatBubble(text: message.text, isMe: false)),
+        Flexible(child: _buildMessageContent(message)),
       ],
+    );
+  }
+
+  Widget _buildMessageContent(ChatMessageModel message) {
+    final bool isImage =
+        message.type == 'image' &&
+        ((message.mediaUrl ?? '').isNotEmpty ||
+            (message.localPath ?? '').isNotEmpty);
+    if (!isImage) {
+      return ChatBubble(text: message.text, isMe: message.isMe);
+    }
+
+    final BorderRadius radius = BorderRadius.only(
+      topLeft: const Radius.circular(16),
+      topRight: const Radius.circular(16),
+      bottomLeft: Radius.circular(message.isMe ? 16 : 6),
+      bottomRight: Radius.circular(message.isMe ? 6 : 16),
+    );
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 220, maxHeight: 220),
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(color: ChatPalette.inputBorder),
+        color: message.isMe ? ChatPalette.outgoingBubble : Colors.white,
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: message.localPath != null && message.localPath!.isNotEmpty
+            ? Image.file(
+                File(message.localPath!),
+                width: 220,
+                height: 180,
+                fit: BoxFit.cover,
+              )
+            : Image.network(
+                message.mediaUrl ?? '',
+                width: 220,
+                height: 180,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 220,
+                  height: 180,
+                  color: ChatPalette.outgoingBubble,
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.image_not_supported_outlined,
+                    size: 28,
+                    color: ChatPalette.subtitleText,
+                  ),
+                ),
+              ),
+      ),
     );
   }
 
@@ -152,7 +767,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
               child: Row(
                 children: <Widget>[
-                  IconButton(
+                  AppIconButton(
                     onPressed: () => Navigator.of(context).maybePop(),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -166,10 +781,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   CircleAvatar(
                     radius: 16,
                     backgroundColor: widget.thread.avatarColor,
-                    backgroundImage: widget.thread.avatarAssetPath.isNotEmpty
+                    backgroundImage: widget.thread.avatarUrl.isNotEmpty
+                        ? NetworkImage(widget.thread.avatarUrl)
+                        : widget.thread.avatarAssetPath.isNotEmpty
                         ? AssetImage(widget.thread.avatarAssetPath)
                         : null,
-                    child: widget.thread.avatarAssetPath.isEmpty
+                    child:
+                        widget.thread.avatarUrl.isEmpty &&
+                            widget.thread.avatarAssetPath.isEmpty
                         ? Text(
                             widget.thread.avatarLabel,
                             style: const TextStyle(
@@ -261,23 +880,52 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ),
             const Divider(height: 1, color: ChatPalette.divider),
             Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                itemCount: _messages.length,
-                itemBuilder: (BuildContext context, int index) {
-                  final ChatMessageModel message = _messages[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildMessageRow(message),
-                  );
-                },
-              ),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _loadError != null
+                  ? Center(
+                      child: Text(
+                        _loadError ?? 'Failed to load messages',
+                        style: const TextStyle(
+                          color: ChatPalette.subtitleText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    )
+                  : _messages.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No messages yet',
+                        style: TextStyle(
+                          color: ChatPalette.subtitleText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                      itemCount: _messages.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final ChatMessageModel message = _messages[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildMessageRow(message),
+                        );
+                      },
+                    ),
             ),
             ChatInputBar(
               controller: _composerController,
               onSend: _sendMessage,
-              onAttach: () {},
+              onAttach: _pickImages,
+              attachmentPaths: _pendingImages
+                  .map((XFile file) => file.path)
+                  .toList(),
+              onRemoveAttachment: _removePendingImage,
+              isSending: _isSending,
             ),
           ],
         ),

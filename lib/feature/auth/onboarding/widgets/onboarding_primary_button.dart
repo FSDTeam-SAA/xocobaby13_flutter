@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'onboarding_styles.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class OnboardingPrimaryButton extends StatelessWidget {
   const OnboardingPrimaryButton({
@@ -17,7 +18,7 @@ class OnboardingPrimaryButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 52,
-      child: ElevatedButton(
+      child: AppElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: OnboardingStyles.button,

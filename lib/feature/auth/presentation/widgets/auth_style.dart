@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class AuthPalette {
   const AuthPalette._();
@@ -60,7 +61,7 @@ class AuthScaffold extends StatelessWidget {
                             if (showBack)
                               Align(
                                 alignment: Alignment.centerLeft,
-                                child: IconButton(
+                                child: AppIconButton(
                                   onPressed: () =>
                                       Navigator.of(context).maybePop(),
                                   icon: const Icon(
@@ -200,7 +201,7 @@ class AuthPrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 56,
-      child: ElevatedButton(
+      child: AppElevatedButton(
         onPressed: loading ? null : onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: AuthPalette.buttonBlue,

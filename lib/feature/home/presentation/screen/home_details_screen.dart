@@ -7,7 +7,11 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/feature/chat/model/chat_api_mapper.dart';
+import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
+import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class HomeDetailsScreen extends StatefulWidget {
   final bool isBooked;
@@ -37,6 +41,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
   String? _spotError;
   Map<String, dynamic>? _spot;
   bool _isBooking = false;
+  bool _isCreatingChat = false;
   int _selectedPhotoIndex = 0;
   static const List<String> _fallbackPhotos = <String>[
     'https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=400&q=80',
@@ -98,10 +103,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         data: <String, dynamic>{
           'spotId': spotId,
           'date': _formatBookingDate(bookingDate),
-          'slot': <String, String>{
-            'start': '7:00 AM',
-            'end': '9:00 AM',
-          },
+          'slot': <String, String>{'start': '7:00 AM', 'end': '9:00 AM'},
         },
       );
       final responseBody = response.data is Map
@@ -118,6 +120,51 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
     } finally {
       if (mounted) {
         setState(() => _isBooking = false);
+      }
+    }
+  }
+
+  Future<void> _startChat() async {
+    if (_isCreatingChat) return;
+    final String ownerId = _readString(_spot?['owner']?['_id']);
+    if (ownerId.isEmpty) {
+      _showMessage(context, 'Spot owner not found');
+      return;
+    }
+    setState(() => _isCreatingChat = true);
+    try {
+      final String currentUserId = await _resolveCurrentUserId();
+      if (currentUserId.isNotEmpty && currentUserId == ownerId) {
+        _showMessage(context, "You can't chat with yourself");
+        return;
+      }
+      final response = await Get.find<AuthorizedPigeon>().post(
+        ApiEndpoints.createChat,
+        data: <String, dynamic>{'fisherId': ownerId},
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final Map<String, dynamic> chat = data is Map
+          ? Map<String, dynamic>.from(data)
+          : <String, dynamic>{};
+      if (chat.isEmpty) {
+        throw Exception('Empty chat');
+      }
+      final ChatThreadModel thread = ChatApiMapper.threadFromChatListItem(
+        chat,
+        currentUserId,
+      );
+      if (!mounted) return;
+      await context.push(ChatRouteNames.detail, extra: thread);
+    } catch (e) {
+      if (mounted) {
+        _showMessage(context, 'Failed to start chat');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCreatingChat = false);
       }
     }
   }
@@ -163,6 +210,42 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         duration: const Duration(milliseconds: 1200),
       ),
     );
+  }
+
+  Future<String> _resolveCurrentUserId() async {
+    try {
+      final authRecord = await Get.find<AuthorizedPigeon>()
+          .getCurrentAuthRecord();
+      final Map<String, dynamic> data = authRecord?.data is Map
+          ? Map<String, dynamic>.from(authRecord!.data as Map)
+          : <String, dynamic>{};
+      final dynamic raw = authRecord?.toJson();
+      final Map<String, dynamic> record = raw is Map
+          ? Map<String, dynamic>.from(raw as Map)
+          : <String, dynamic>{};
+      return _pickFirstString(<dynamic>[
+        data['id'],
+        data['_id'],
+        data['userId'],
+        record['uid'],
+        record['userId'],
+        record['user_id'],
+        record['id'],
+        record['_id'],
+      ]);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _pickFirstString(List<dynamic> values) {
+    for (final dynamic value in values) {
+      final String text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty) {
+        return text;
+      }
+    }
+    return '';
   }
 
   double _zoomForDistance(double? distanceKm) {
@@ -230,7 +313,8 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       return images
           .map((dynamic item) {
             if (item is String) return item;
-            if (item is Map && item['url'] != null) return item['url'].toString();
+            if (item is Map && item['url'] != null)
+              return item['url'].toString();
             return '';
           })
           .where((String url) => url.isNotEmpty)
@@ -324,11 +408,11 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
                                   Container(
-                                width: 72,
-                                height: 56,
-                                color: const Color(0xFFE2E8F1),
-                                child: const Icon(Icons.photo, size: 20),
-                              ),
+                                    width: 72,
+                                    height: 56,
+                                    color: const Color(0xFFE2E8F1),
+                                    child: const Icon(Icons.photo, size: 20),
+                                  ),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -404,8 +488,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       initialValue: selectedReason,
                       icon: const Icon(Icons.keyboard_arrow_down),
                       decoration: InputDecoration(
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
                         hintText: 'Select a reason',
@@ -415,8 +500,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFD2DEE9)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFD2DEE9),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -451,7 +537,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 42,
-                      child: ElevatedButton(
+                      child: AppElevatedButton(
                         onPressed: selectedReason == null
                             ? null
                             : () {
@@ -489,14 +575,17 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
   Widget build(BuildContext context) {
     final Map<String, dynamic>? spot = _spot;
     final List<String> photos = _readImages(spot?['images']);
-    final List<String> galleryPhotos =
-        photos.isEmpty ? _fallbackPhotos : photos;
+    final List<String> galleryPhotos = photos.isEmpty
+        ? _fallbackPhotos
+        : photos;
     final int safePhotoIndex = _selectedPhotoIndex.clamp(
       0,
       galleryPhotos.isEmpty ? 0 : galleryPhotos.length - 1,
     );
-    final String title =
-        _readString(spot?['title'], fallback: 'Crystal Lake Sanctuary');
+    final String title = _readString(
+      spot?['title'],
+      fallback: 'Crystal Lake Sanctuary',
+    );
     final String description = _readString(
       spot?['description'],
       fallback:
@@ -507,13 +596,15 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
     final int reviews = _readInt(spot?['ratingCount']);
     final String dateLabel = _formatDate(spot?['createdAt']?.toString());
     final List<String> features = _readTags(spot?['features']);
-    final String hostName =
-        _readString(spot?['owner']?['fullName'], fallback: 'John Mitchell');
-    final String hostAvatar =
-        _readString(spot?['owner']?['avatar']?['url']);
+    final String hostName = _readString(
+      spot?['owner']?['fullName'],
+      fallback: 'John Mitchell',
+    );
+    final String hostAvatar = _readString(spot?['owner']?['avatar']?['url']);
     final String locationLabel = _formatLocation(spot?['location']);
     final LatLng? spotLatLng = _readLatLng(spot?['location']);
-    final LatLng mapCenter = spotLatLng ??
+    final LatLng mapCenter =
+        spotLatLng ??
         ((widget.lat != null && widget.lng != null)
             ? LatLng(widget.lat!, widget.lng!)
             : const LatLng(39.8283, -98.5795));
@@ -522,18 +613,13 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       zoom: _zoomForDistance(widget.distanceKm),
     );
     final Set<Marker> mapMarkers = <Marker>{
-      Marker(
-        markerId: const MarkerId('spot'),
-        position: mapCenter,
-      ),
+      Marker(markerId: const MarkerId('spot'), position: mapCenter),
     };
 
     if (_isLoadingSpot && spot == null) {
       return const Scaffold(
         backgroundColor: Color(0xFFF2F9FF),
-        body: SafeArea(
-          child: Center(child: CircularProgressIndicator()),
-        ),
+        body: SafeArea(child: Center(child: CircularProgressIndicator())),
       );
     }
 
@@ -631,11 +717,14 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                                     errorBuilder:
                                         (context, error, stackTrace) =>
                                             Container(
-                                      width: 62,
-                                      height: 62,
-                                      color: const Color(0xFFE2E8F1),
-                                      child: const Icon(Icons.photo, size: 24),
-                                    ),
+                                              width: 62,
+                                              height: 62,
+                                              color: const Color(0xFFE2E8F1),
+                                              child: const Icon(
+                                                Icons.photo,
+                                                size: 24,
+                                              ),
+                                            ),
                                   ),
                                 ),
                               ),
@@ -910,8 +999,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       children: <Widget>[
                         CircleAvatar(
                           radius: 17,
-                          backgroundImage:
-                              hostAvatar.isNotEmpty ? NetworkImage(hostAvatar) : null,
+                          backgroundImage: hostAvatar.isNotEmpty
+                              ? NetworkImage(hostAvatar)
+                              : null,
                           backgroundColor: const Color(0xFFE2E8F1),
                           child: hostAvatar.isEmpty
                               ? const Icon(
@@ -957,9 +1047,8 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                         ),
                         SizedBox(
                           height: 32,
-                          child: ElevatedButton(
-                            onPressed: () =>
-                                _showMessage(context, 'Start Chat'),
+                          child: AppElevatedButton(
+                            onPressed: _startChat,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF1787CF),
                               elevation: 0,
@@ -1096,12 +1185,12 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     height: 52,
-                    child: ElevatedButton(
+                    child: AppElevatedButton(
                       onPressed: _isBooking
                           ? null
                           : _isBooked
-                              ? _openCancellationSheet
-                              : _createBooking,
+                          ? _openCancellationSheet
+                          : _createBooking,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1787CF),
                         elevation: 0,
@@ -1115,8 +1204,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : Text(

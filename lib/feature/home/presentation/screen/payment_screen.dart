@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -129,9 +130,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           child: _FieldLabel(label: 'Expiry Date / Valid Thru'),
                         ),
                         const SizedBox(width: 10),
-                        const Expanded(
-                          child: _FieldLabel(label: 'CVV / CVC'),
-                        ),
+                        const Expanded(child: _FieldLabel(label: 'CVV / CVC')),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -208,7 +207,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 36,
-                      child: ElevatedButton(
+                      child: AppElevatedButton(
                         onPressed: _payNow,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1787CF),

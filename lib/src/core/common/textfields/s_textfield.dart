@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class CustomTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -48,7 +49,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
               ? Icon(widget.prefixIcon, size: 16, color: Color(0xFFB1B3B4))
               : null,
           suffixIcon: widget.isPassword
-              ? IconButton(
+              ? AppIconButton(
                   icon: Icon(
                     _obscure ? Icons.visibility_off : Icons.visibility,
                     size: 18,

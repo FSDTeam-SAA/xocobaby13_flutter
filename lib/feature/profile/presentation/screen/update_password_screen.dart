@@ -6,17 +6,16 @@ import 'package:xocobaby13/feature/auth/controller/change_password_controller.da
 import 'package:xocobaby13/feature/profile/presentation/routes/profile_routes.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_text_field.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class UpdatePasswordScreen extends StatefulWidget {
   const UpdatePasswordScreen({super.key});
 
   @override
-  State<UpdatePasswordScreen> createState() =>
-      _UpdatePasswordScreenState();
+  State<UpdatePasswordScreen> createState() => _UpdatePasswordScreenState();
 }
 
-class _UpdatePasswordScreenState
-    extends State<UpdatePasswordScreen> {
+class _UpdatePasswordScreenState extends State<UpdatePasswordScreen> {
   final TextEditingController _currentController = TextEditingController();
   final TextEditingController _newController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
@@ -107,7 +106,7 @@ class _UpdatePasswordScreenState
             SizedBox(
               width: double.infinity,
               height: 44,
-              child: ElevatedButton(
+              child: AppElevatedButton(
                 onPressed: canSave ? _save : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ProfilePalette.blue,

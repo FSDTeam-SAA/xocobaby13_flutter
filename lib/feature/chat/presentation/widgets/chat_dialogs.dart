@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_style.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class ChatDialogs {
   const ChatDialogs._();
@@ -228,7 +229,7 @@ class _ReportDoneDialog extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               height: 36,
-              child: ElevatedButton(
+              child: AppElevatedButton(
                 onPressed: onDone,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ChatPalette.actionBlue,
@@ -345,7 +346,7 @@ class _BlockConfirmDialog extends StatelessWidget {
                 Expanded(
                   child: SizedBox(
                     height: 34,
-                    child: ElevatedButton(
+                    child: AppElevatedButton(
                       onPressed: onCancel,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ChatPalette.neutralButton,
@@ -369,7 +370,7 @@ class _BlockConfirmDialog extends StatelessWidget {
                 Expanded(
                   child: SizedBox(
                     height: 34,
-                    child: ElevatedButton(
+                    child: AppElevatedButton(
                       onPressed: onConfirm,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ChatPalette.dangerRed,
@@ -443,7 +444,7 @@ class _BlockDoneDialog extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               height: 34,
-              child: ElevatedButton(
+              child: AppElevatedButton(
                 onPressed: onClose,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ChatPalette.neutralButton,
