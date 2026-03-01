@@ -76,6 +76,12 @@ base class ApiEndpoints {
   /// ### get
   static const String getCurrentProfile = _User.getCurrentProfile;
 
+  /// ### patch
+  static String blockUser(String userId) => _User.blockUser(userId);
+
+  /// ### patch
+  static String unblockUser(String userId) => _User.unblockUser(userId);
+
   /// ### put
   static const String editProfile = _User.editProfile;
 
@@ -133,25 +139,20 @@ base class ApiEndpoints {
   /// ### Get
   static const String getAllChat = _Message.getAllChat;
 
-  /// ### Get
-  static String getMessages(String chatId) => _Message.getMessages(chatId);
+  /// ### Post
+  static const String createChat = _Message.createChat;
 
+  /// ### Get
   static String getSingleChat(String chatId) => _Message.getSingleChat(chatId);
 
   /// ### Post
-  static String sendMessage(String chatId) => _Message.sendMessage(chatId);
+  static const String sendMessage = _Message.sendMessage;
 
-  /// ### Put
-  static String messageRead(String messageId) =>
-      _Message.messageRead(messageId);
-
-  /// ### Put
-  static String editMessage(String messageId) =>
-      _Message.editMessage(messageId);
+  /// ### Patch
+  static const String updateMessage = _Message.updateMessage;
 
   /// ### Delete
-  static String deleteMessage(String messageId) =>
-      _Message.deleteMessage(messageId);
+  static const String deleteMessage = _Message.deleteMessage;
 
   ////////////
   ///
@@ -161,6 +162,10 @@ base class ApiEndpoints {
   ///////////
   ///
   static String timeExtend(String chatId) => _Message.timeExtend(chatId);
+
+  // ---------------------- ANALYTICS -----------------------------
+  /// ### get
+  static const String ownerEarnings = _Analytics.ownerEarnings;
 
   // ---------------------- Spot -----------------------------
   /// ### get
@@ -267,6 +272,8 @@ class _User {
   static const String _userRoute = '${ApiEndpoints.baseUrl}/user';
   static String getuserbyId(String id) => '$_userRoute/single-user/$id';
   static const String getCurrentProfile = '$_userRoute/profile';
+  static String blockUser(String userId) => '$_userRoute/block/$userId';
+  static String unblockUser(String userId) => '$_userRoute/unblock/$userId';
 
   static const String editProfile = '$_userRoute/update-profile';
   static const String uploadProfileAvatar = '$_userRoute/upload-avatar';
@@ -325,31 +332,31 @@ class _Booking {
 class _Message {
   static const String _messageRoute = '${ApiEndpoints.baseUrl}/chat';
 
-  static const String getAllChat = "$_messageRoute/get-chat";
+  static const String getAllChat = _messageRoute;
 
-  static String getSingleChat(String chatId) =>
-      "$_messageRoute/get-single-chat/$chatId";
+  static const String createChat = _messageRoute;
 
-  /// Get
-  static String getMessages(String chatId) => "$_messageRoute/messages/$chatId";
+  static String getSingleChat(String chatId) => "$_messageRoute/$chatId";
 
   /// Post
-  static String sendMessage(String chatId) => "$_messageRoute/send-message";
+  static const String sendMessage = "$_messageRoute/send";
 
-  /// Put
-  static String messageRead(String messageId) =>
-      "$_messageRoute/read/$messageId";
-
-  /// Put
-  static String editMessage(String messageId) => "$_messageRoute/$messageId";
+  /// Patch
+  static const String updateMessage = "$_messageRoute/message/update";
 
   /// Delete
-  static String deleteMessage(String messageId) => "$_messageRoute/$messageId";
+  static const String deleteMessage = "$_messageRoute/message/delete";
 
   static String getUselallChat(String chatId) => "$_messageRoute/get-chat";
 
   static String timeExtend(String chatId) =>
       "$_messageRoute/extend-time/$chatId";
+}
+
+// ---------------------- ANALYTICS -----------------------------
+class _Analytics {
+  static const String _analyticsRoute = '${ApiEndpoints.baseUrl}/analytics';
+  static const String ownerEarnings = '$_analyticsRoute/earnings';
 }
 
 // ---------------------- LICENSE -----------------------------

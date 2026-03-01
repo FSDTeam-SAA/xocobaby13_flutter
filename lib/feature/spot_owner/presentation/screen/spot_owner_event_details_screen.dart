@@ -8,9 +8,6 @@ class SpotOwnerEventDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return HomeDetailsScreen(
-      showBookingButton: false,
-      spotId: spotId,
-    );
+    return HomeDetailsScreen(showBookingButton: false, spotId: spotId);
   }
 }

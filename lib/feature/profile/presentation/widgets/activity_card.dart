@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 import 'package:xocobaby13/feature/profile/model/activity_item_model.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class ActivityCard extends StatelessWidget {
   final ActivityItemModel item;
@@ -192,7 +193,7 @@ class ActivityCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             height: 46,
-            child: OutlinedButton(
+            child: AppOutlinedButton(
               onPressed: () {
                 if (useDetailsRoute) {
                   final query = <String, String>{};

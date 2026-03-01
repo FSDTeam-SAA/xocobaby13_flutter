@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
 import 'package:xocobaby13/feature/spot_owner/presentation/routes/spot_owner_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class SpotOwnerHomeScreen extends StatefulWidget {
   const SpotOwnerHomeScreen({super.key});
@@ -15,17 +17,23 @@ class SpotOwnerHomeScreen extends StatefulWidget {
 }
 
 class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
+  late final ProfileController _profileController;
   bool _isLoadingUnread = false;
   int _unreadCount = 0;
   bool _isLoadingEvents = false;
   String? _eventsError;
   List<_SpotOwnerEvent> _runningEvents = const <_SpotOwnerEvent>[];
+  bool _isLoadingEarnings = false;
+  String _totalEarnings = r'$128.7k';
+  String _earningsChange = '+ 36%';
 
   @override
   void initState() {
     super.initState();
+    _profileController = ProfileController.instance();
     _loadUnreadCount();
     _loadRunningEvents();
+    _loadEarnings();
   }
 
   Future<void> _loadUnreadCount() async {
@@ -75,10 +83,17 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
     return text.isEmpty ? fallback : text;
   }
 
+  String _displayName() {
+    final String name = _readString(_profileController.profile.value.name);
+    if (name.isEmpty) return 'Spot Owner';
+    return name;
+  }
+
   String _formatLocation(dynamic locationRaw) {
     if (locationRaw is Map) {
-      final Map<String, dynamic> location =
-          Map<String, dynamic>.from(locationRaw);
+      final Map<String, dynamic> location = Map<String, dynamic>.from(
+        locationRaw,
+      );
       final String address = _readString(location['address']);
       final String city = _readString(location['city']);
       final String country = _readString(location['country']);
@@ -158,10 +173,8 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
       if (data is List) {
         for (final dynamic item in data) {
           if (item is Map) {
-            final Map<String, dynamic> spot =
-                Map<String, dynamic>.from(item);
-            final String status =
-                _readString(spot['status']).toLowerCase();
+            final Map<String, dynamic> spot = Map<String, dynamic>.from(item);
+            final String status = _readString(spot['status']).toLowerCase();
             if (status == 'running') {
               events.add(_mapSpotToEvent(spot));
             }
@@ -182,6 +195,47 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
     }
   }
 
+  Future<void> _loadEarnings() async {
+    if (_isLoadingEarnings) return;
+    setState(() => _isLoadingEarnings = true);
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.ownerEarnings,
+      );
+      final statusCode = response.statusCode ?? 0;
+      if (statusCode < 200 || statusCode >= 300) {
+        if (!mounted) return;
+        setState(() => _isLoadingEarnings = false);
+        return;
+      }
+
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final payload = responseBody['data'];
+      final data = payload is Map
+          ? Map<String, dynamic>.from(payload)
+          : responseBody;
+
+      final String totalEarnings = _readString(data['totalEarnings']);
+      final String percentageChange = _readString(data['percentageChange']);
+
+      if (!mounted) return;
+      setState(() {
+        if (totalEarnings.isNotEmpty) {
+          _totalEarnings = totalEarnings;
+        }
+        if (percentageChange.isNotEmpty) {
+          _earningsChange = percentageChange;
+        }
+        _isLoadingEarnings = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingEarnings = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -191,50 +245,51 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Row(
-              children: <Widget>[
-                const _SpotOwnerAvatar(
-                  imageUrl:
-                      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
-                ),
-                const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Good Morning',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF3A4A5A)),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Hello, Mack',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1D2A36),
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () async {
-                    await context.push(NotificationRouteNames.notifications);
-                    if (mounted) {
-                      _loadUnreadCount();
-                    }
-                  },
-                  child: _SpotOwnerNotificationBell(
-                    unreadCount: _unreadCount,
+            Obx(
+              () => Row(
+                children: <Widget>[
+                  _SpotOwnerAvatar(
+                    imageProvider:
+                        _profileController.profile.value.avatarImageProvider,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Good Morning',
+                        style:
+                            TextStyle(fontSize: 14, color: Color(0xFF3A4A5A)),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Hello, ${_displayName()}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1D2A36),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () async {
+                      await context.push(NotificationRouteNames.notifications);
+                      if (mounted) {
+                        _loadUnreadCount();
+                      }
+                    },
+                    child: _SpotOwnerNotificationBell(unreadCount: _unreadCount),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 22),
-            const _SpotOwnerSummaryCard(
+            _SpotOwnerSummaryCard(
               title: 'Total Earnings',
-              value: r'$128.7k',
-              changeText: '+ 36% ',
+              value: _totalEarnings,
+              changeText: '$_earningsChange ',
             ),
             const SizedBox(height: 22),
             const Text(
@@ -301,9 +356,9 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
 }
 
 class _SpotOwnerAvatar extends StatelessWidget {
-  final String imageUrl;
+  final ImageProvider imageProvider;
 
-  const _SpotOwnerAvatar({required this.imageUrl});
+  const _SpotOwnerAvatar({required this.imageProvider});
 
   @override
   Widget build(BuildContext context) {
@@ -321,7 +376,7 @@ class _SpotOwnerAvatar extends StatelessWidget {
           ),
         ],
         image: DecorationImage(
-          image: NetworkImage(imageUrl),
+          image: imageProvider,
           fit: BoxFit.cover,
           onError: (_, __) {},
         ),
@@ -639,7 +694,7 @@ class _SpotOwnerEventCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   height: 32,
-                  child: ElevatedButton(
+                  child: AppElevatedButton(
                     onPressed: onAnalytics,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1787CF),

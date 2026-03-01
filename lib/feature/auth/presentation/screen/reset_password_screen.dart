@@ -6,6 +6,7 @@ import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart
 import 'package:xocobaby13/feature/auth/controller/reset_password_controller.dart';
 import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
 import 'package:xocobaby13/core/notifiers/button_status_notifier.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -70,8 +71,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading =
-        _controller.processStatusNotifier.status is LoadingStatus;
+    final isLoading = _controller.processStatusNotifier.status is LoadingStatus;
     final passwordText = _passwordController.text;
     final confirmText = _confirmPasswordController.text;
     final canSubmit =
@@ -108,7 +108,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               _controller.password = value;
               setState(() {});
             },
-            suffixIcon: IconButton(
+            suffixIcon: AppIconButton(
               onPressed: () {
                 setState(() => _obscurePassword = !_obscurePassword);
               },
@@ -130,7 +130,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               _controller.confirmPassword = value;
               setState(() {});
             },
-            suffixIcon: IconButton(
+            suffixIcon: AppIconButton(
               onPressed: () {
                 setState(() => _obscureConfirm = !_obscureConfirm);
               },

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class DirectionMapScreen extends StatelessWidget {
   const DirectionMapScreen({super.key});
@@ -61,7 +62,10 @@ class DirectionMapScreen extends StatelessWidget {
               left: 16,
               right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
@@ -146,7 +150,7 @@ class DirectionMapScreen extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       height: 44,
-                      child: ElevatedButton(
+                      child: AppElevatedButton(
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(

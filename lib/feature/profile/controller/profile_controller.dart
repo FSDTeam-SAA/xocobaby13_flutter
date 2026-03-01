@@ -1,4 +1,6 @@
 import 'package:app_pigeon/app_pigeon.dart';
+import 'package:dio/dio.dart' as dio;
+import 'package:get/get.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:image_picker/image_picker.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
@@ -17,17 +19,16 @@ class ProfileController extends GetxController {
   XFile? _pendingAvatarFile;
 
   final Rx<UserProfileDataModel> profile = const UserProfileDataModel(
-    name: 'Mr. Mack',
+    name: 'Unknown User',
     email: 'you@gmail.com',
-    phone: '(217) 555-0113',
-    description: '',
-    avatarAssetPath: 'assets/onboarding/avatar_mr_raja.jpg',
+    phone: '(000) 000-0000',
+    description: 'I am a new user.',
+    avatarAssetPath: 'assets/images/Profile_avatar_placeholder_large.png',
     avatarUrl: '',
     avatarBytes: null,
   ).obs;
 
-  final RxList<ActivityItemModel> _activityItems =
-      <ActivityItemModel>[].obs;
+  final RxList<ActivityItemModel> _activityItems = <ActivityItemModel>[].obs;
 
   void setActivityStatus(ActivityStatusModel status) {
     selectedActivityStatus.value = status;
@@ -70,7 +71,7 @@ class ProfileController extends GetxController {
           (ActivityItemModel item) =>
               item.status == selectedActivityStatus.value,
         )
-      .toList();
+        .toList();
   }
 
   Future<void> loadActivities() async {
@@ -121,7 +122,9 @@ class ProfileController extends GetxController {
     if (data is List) {
       for (final item in data) {
         if (item is Map) {
-          items.add(_mapBookingToActivity(Map<String, dynamic>.from(item), uiStatus));
+          items.add(
+            _mapBookingToActivity(Map<String, dynamic>.from(item), uiStatus),
+          );
         }
       }
     }
@@ -141,14 +144,13 @@ class ProfileController extends GetxController {
     final Map<String, dynamic> slot = booking['slot'] is Map
         ? Map<String, dynamic>.from(booking['slot'])
         : <String, dynamic>{};
-    final String title =
-        spot['title']?.toString().trim().isNotEmpty == true
-            ? spot['title'].toString()
-            : 'Spot Booking';
+    final String title = spot['title']?.toString().trim().isNotEmpty == true
+        ? spot['title'].toString()
+        : 'Spot Booking';
     final String ownerName =
         owner['fullName']?.toString().trim().isNotEmpty == true
-            ? owner['fullName'].toString()
-            : 'Spot Owner';
+        ? owner['fullName'].toString()
+        : 'Spot Owner';
     final String imagePath = _pickImageUrl(spot['images']);
     final String dateLabel = _formatDate(booking['date']?.toString());
     final String timeRange = _formatTimeRange(slot);
@@ -272,13 +274,13 @@ class ProfileController extends GetxController {
     required String bio,
   }) async {
     try {
-      final formData = FormData.fromMap(<String, dynamic>{
+      final formData = dio.FormData.fromMap(<String, dynamic>{
         'fullName': fullName,
         'email': email,
         'phone': phone,
         'bio': bio,
         if (_pendingAvatarFile != null)
-          'avatar': await MultipartFile.fromFile(
+          'avatar': await dio.MultipartFile.fromFile(
             _pendingAvatarFile!.path,
             filename: _pendingAvatarFile!.name,
           ),
@@ -287,7 +289,7 @@ class ProfileController extends GetxController {
       final response = await _appPigeon.put(
         ApiEndpoints.getCurrentProfile,
         data: formData,
-        options: Options(contentType: 'multipart/form-data'),
+        options: dio.Options(contentType: 'multipart/form-data'),
       );
       final statusCode = response.statusCode ?? 0;
       if (statusCode < 200 || statusCode >= 300) {
@@ -310,9 +312,7 @@ class ProfileController extends GetxController {
         ? Map<String, dynamic>.from(responseData)
         : <String, dynamic>{};
     final payload = responseBody['data'];
-    return payload is Map
-        ? Map<String, dynamic>.from(payload)
-        : responseBody;
+    return payload is Map ? Map<String, dynamic>.from(payload) : responseBody;
   }
 
   void _applyProfileData(Map<String, dynamic> data) {

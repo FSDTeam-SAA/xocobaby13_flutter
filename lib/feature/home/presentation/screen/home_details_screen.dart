@@ -7,7 +7,11 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/feature/chat/model/chat_api_mapper.dart';
+import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
+import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class HomeDetailsScreen extends StatefulWidget {
   final bool isBooked;
@@ -37,6 +41,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
   String? _spotError;
   Map<String, dynamic>? _spot;
   bool _isBooking = false;
+  bool _isCreatingChat = false;
   int _selectedPhotoIndex = 0;
   static const List<String> _fallbackPhotos = <String>[
     'https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=400&q=80',
@@ -174,6 +179,49 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         );
       },
     );
+  Future<void> _startChat() async {
+    if (_isCreatingChat) return;
+    final String ownerId = _readString(_spot?['owner']?['_id']);
+    if (ownerId.isEmpty) {
+      _showMessage(context, 'Spot owner not found');
+      return;
+    }
+    setState(() => _isCreatingChat = true);
+    try {
+      final String currentUserId = await _resolveCurrentUserId();
+      if (currentUserId.isNotEmpty && currentUserId == ownerId) {
+        _showMessage(context, "You can't chat with yourself");
+        return;
+      }
+      final response = await Get.find<AuthorizedPigeon>().post(
+        ApiEndpoints.createChat,
+        data: <String, dynamic>{'fisherId': ownerId},
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final Map<String, dynamic> chat = data is Map
+          ? Map<String, dynamic>.from(data)
+          : <String, dynamic>{};
+      if (chat.isEmpty) {
+        throw Exception('Empty chat');
+      }
+      final ChatThreadModel thread = ChatApiMapper.threadFromChatListItem(
+        chat,
+        currentUserId,
+      );
+      if (!mounted) return;
+      await context.push(ChatRouteNames.detail, extra: thread);
+    } catch (e) {
+      if (mounted) {
+        _showMessage(context, 'Failed to start chat');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCreatingChat = false);
+      }
+    }
   }
 
   Future<void> _loadSpot() async {
@@ -217,6 +265,42 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         duration: const Duration(milliseconds: 1200),
       ),
     );
+  }
+
+  Future<String> _resolveCurrentUserId() async {
+    try {
+      final authRecord = await Get.find<AuthorizedPigeon>()
+          .getCurrentAuthRecord();
+      final Map<String, dynamic> data = authRecord?.data is Map
+          ? Map<String, dynamic>.from(authRecord!.data as Map)
+          : <String, dynamic>{};
+      final dynamic raw = authRecord?.toJson();
+      final Map<String, dynamic> record = raw is Map
+          ? Map<String, dynamic>.from(raw as Map)
+          : <String, dynamic>{};
+      return _pickFirstString(<dynamic>[
+        data['id'],
+        data['_id'],
+        data['userId'],
+        record['uid'],
+        record['userId'],
+        record['user_id'],
+        record['id'],
+        record['_id'],
+      ]);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _pickFirstString(List<dynamic> values) {
+    for (final dynamic value in values) {
+      final String text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty) {
+        return text;
+      }
+    }
+    return '';
   }
 
   double _zoomForDistance(double? distanceKm) {
@@ -287,6 +371,8 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
             if (item is Map && item['url'] != null) {
               return item['url'].toString();
             }
+            if (item is Map && item['url'] != null)
+              return item['url'].toString();
             return '';
           })
           .where((String url) => url.isNotEmpty)
@@ -509,7 +595,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 42,
-                      child: ElevatedButton(
+                      child: AppElevatedButton(
                         onPressed: selectedReason == null
                             ? null
                             : () {
@@ -1019,9 +1105,8 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                         ),
                         SizedBox(
                           height: 32,
-                          child: ElevatedButton(
-                            onPressed: () =>
-                                _showMessage(context, 'Start Chat'),
+                          child: AppElevatedButton(
+                            onPressed: _startChat,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF1787CF),
                               elevation: 0,
@@ -1158,7 +1243,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     height: 52,
-                    child: ElevatedButton(
+                    child: AppElevatedButton(
                       onPressed: _isBooking
                           ? null
                           : _isBooked

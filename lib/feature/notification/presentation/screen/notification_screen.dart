@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -110,8 +111,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
       setState(() {
         _items = _items
             .map(
-              (_NotificationItem current) =>
-                  current.id == item.id ? current.copyWith(isRead: true) : current,
+              (_NotificationItem current) => current.id == item.id
+                  ? current.copyWith(isRead: true)
+                  : current,
             )
             .toList(growable: false);
       });
@@ -123,12 +125,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Future<void> _deleteNotification(_NotificationItem item) async {
     if (item.id.isEmpty) return;
-    final int existingIndex =
-        _items.indexWhere((_NotificationItem current) => current.id == item.id);
+    final int existingIndex = _items.indexWhere(
+      (_NotificationItem current) => current.id == item.id,
+    );
     if (existingIndex == -1) return;
-    final List<_NotificationItem> updated =
-        List<_NotificationItem>.from(_items)
-          ..removeAt(existingIndex);
+    final List<_NotificationItem> updated = List<_NotificationItem>.from(_items)
+      ..removeAt(existingIndex);
     setState(() => _items = updated);
     try {
       await Get.find<AuthorizedPigeon>().delete(
@@ -139,8 +141,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        final List<_NotificationItem> reverted =
-            List<_NotificationItem>.from(_items);
+        final List<_NotificationItem> reverted = List<_NotificationItem>.from(
+          _items,
+        );
         reverted.insert(existingIndex, item);
         _items = reverted;
       });
@@ -196,7 +199,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           if (_items.any(
                             (_NotificationItem item) => !item.isRead,
                           ))
-                            TextButton(
+                            AppTextButton(
                               onPressed: _isUpdatingAll ? null : _markAllAsRead,
                               style: TextButton.styleFrom(
                                 foregroundColor: const Color(0xFF1787CF),
@@ -253,39 +256,37 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           ),
                         )
                       else
-                        ..._items.map(
-                          (_NotificationItem item) {
-                            final Widget card = _NotificationCard(
-                              item: item,
-                              onTap: () {
-                                _markNotificationAsRead(item);
-                                _showMessage(context, item.title);
-                              },
-                            );
-                            if (item.id.isEmpty) {
-                              return card;
-                            }
-                            return Dismissible(
-                              key: ValueKey<String>(item.id),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 24),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE23A3A),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Icon(
-                                  CupertinoIcons.delete,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
+                        ..._items.map((_NotificationItem item) {
+                          final Widget card = _NotificationCard(
+                            item: item,
+                            onTap: () {
+                              _markNotificationAsRead(item);
+                              _showMessage(context, item.title);
+                            },
+                          );
+                          if (item.id.isEmpty) {
+                            return card;
+                          }
+                          return Dismissible(
+                            key: ValueKey<String>(item.id),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 24),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE23A3A),
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                              onDismissed: (_) => _deleteNotification(item),
-                              child: card,
-                            );
-                          },
-                        ),
+                              child: const Icon(
+                                CupertinoIcons.delete,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            onDismissed: (_) => _deleteNotification(item),
+                            child: card,
+                          );
+                        }),
                     ],
                   ),
                 ),
@@ -307,10 +308,12 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color borderColor =
-        item.isRead ? const Color(0xFFE2E8F1) : const Color(0xFF9CC8F6);
-    final Color cardColor =
-        item.isRead ? Colors.white : const Color(0xFFF3F8FF);
+    final Color borderColor = item.isRead
+        ? const Color(0xFFE2E8F1)
+        : const Color(0xFF9CC8F6);
+    final Color cardColor = item.isRead
+        ? Colors.white
+        : const Color(0xFFF3F8FF);
     return GestureDetector(
       onTap: onTap,
       child: Container(

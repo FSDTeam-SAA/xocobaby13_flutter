@@ -6,17 +6,16 @@ import 'package:xocobaby13/feature/profile/model/user_profile_data_model.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_avatar.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_text_field.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class PersonalDetailsScreen extends StatefulWidget {
   const PersonalDetailsScreen({super.key});
 
   @override
-  State<PersonalDetailsScreen> createState() =>
-      _PersonalDetailsScreenState();
+  State<PersonalDetailsScreen> createState() => _PersonalDetailsScreenState();
 }
 
-class _PersonalDetailsScreenState
-    extends State<PersonalDetailsScreen> {
+class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
@@ -36,18 +35,17 @@ class _PersonalDetailsScreenState
     _phoneController = TextEditingController(text: profile.phone);
     _descriptionController = TextEditingController(text: profile.description);
 
-    _profileWorker = ever<UserProfileDataModel>(
-      _controller.profile,
-      (UserProfileDataModel profile) {
-        if (!mounted) return;
-        _draft = profile;
-        _nameController.text = profile.name;
-        _emailController.text = profile.email;
-        _phoneController.text = profile.phone;
-        _descriptionController.text = profile.description;
-        setState(() {});
-      },
-    );
+    _profileWorker = ever<UserProfileDataModel>(_controller.profile, (
+      UserProfileDataModel profile,
+    ) {
+      if (!mounted) return;
+      _draft = profile;
+      _nameController.text = profile.name;
+      _emailController.text = profile.email;
+      _phoneController.text = profile.phone;
+      _descriptionController.text = profile.description;
+      setState(() {});
+    });
   }
 
   @override
@@ -130,34 +128,34 @@ class _PersonalDetailsScreenState
             ProfileTextField(
               label: 'Full name',
               controller: _nameController,
-              hint: 'Mr. Mack',
+              hint: 'Khalid Hossain',
             ),
             const SizedBox(height: 14),
             ProfileTextField(
               label: 'Email address',
               controller: _emailController,
-              hint: 'you@gmail.com',
+              hint: 'khalid@gmail.com',
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 14),
             ProfileTextField(
               label: 'Phone Number',
               controller: _phoneController,
-              hint: '(217) 555-0113',
+              hint: '(000) 000-0000',
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 14),
             ProfileTextField(
               label: 'Write A Description About You',
               controller: _descriptionController,
-              hint: '',
+              hint: 'Give a brief description about yourself',
               maxLines: 4,
             ),
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
               height: 44,
-              child: ElevatedButton(
+              child: AppElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ProfilePalette.blue,

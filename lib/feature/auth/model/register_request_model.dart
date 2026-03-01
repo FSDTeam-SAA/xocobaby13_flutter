@@ -20,8 +20,7 @@ class RegisterRequest {
 
   factory RegisterRequest.fromJson(Map<String, dynamic> json) =>
       RegisterRequest(
-        fullName:
-            json['fullName'] as String? ?? json['name'] as String? ?? '',
+        fullName: json['fullName'] as String? ?? json['name'] as String? ?? '',
         email: json['email'] as String? ?? '',
         password: json['password'] as String? ?? '',
         role: json['role'] as String? ?? '',

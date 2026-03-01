@@ -21,9 +21,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = ForgetPasswordController(
-      SnackbarNotifier(context: context),
-    );
+    _controller = ForgetPasswordController(SnackbarNotifier(context: context));
     _controller.processStatusNotifier.addListener(_onStatusChanged);
     _controller.addListener(_onStatusChanged);
   }
@@ -57,8 +55,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading =
-        _controller.processStatusNotifier.status is LoadingStatus;
+    final isLoading = _controller.processStatusNotifier.status is LoadingStatus;
     final canSubmit = _controller.email.isNotEmpty && !isLoading;
     return AuthScaffold(
       appTitle: 'The Bob App',

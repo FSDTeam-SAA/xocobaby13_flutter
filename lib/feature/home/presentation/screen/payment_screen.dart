@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class PaymentScreen extends StatefulWidget {
   final String bookingId;
@@ -225,6 +227,72 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     _PaymentMethodTile(
                       title: 'Stripe',
                       subtitle: 'Pay securely with Stripe',
+                      subtitle: 'Pay with Stripe',
+                      selected: !_useCard,
+                      onTap: () => setState(() => _useCard = false),
+                    ),
+                    const SizedBox(height: 10),
+                    _FieldLabel(label: 'Card Number'),
+                    const SizedBox(height: 4),
+                    _PaymentInputField(
+                      controller: _cardNumberController,
+                      hintText: '****  ****  ****  ****',
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 8),
+                    _FieldLabel(label: 'Cardholder Name'),
+                    const SizedBox(height: 4),
+                    _PaymentInputField(
+                      controller: _cardHolderController,
+                      hintText: 'Enter Cardholder Name',
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: <Widget>[
+                        const Expanded(
+                          child: _FieldLabel(label: 'Expiry Date / Valid Thru'),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(child: _FieldLabel(label: 'CVV / CVC')),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: _PaymentInputField(
+                            controller: _expiryController,
+                            hintText: '-- / --',
+                            keyboardType: TextInputType.datetime,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _PaymentInputField(
+                            controller: _cvvController,
+                            hintText: 'Enter CVV',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => setState(() => _saveCard = !_saveCard),
+                      child: Row(
+                        children: <Widget>[
+                          _MiniToggle(selected: _saveCard),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Save this card',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF3A4A5A),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -264,6 +332,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       height: 36,
                       child: ElevatedButton(
                         onPressed: _isPaying ? null : _payNow,
+                      child: AppElevatedButton(
+                        onPressed: _payNow,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1787CF),
                           elevation: 0,

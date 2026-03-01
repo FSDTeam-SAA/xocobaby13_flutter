@@ -200,56 +200,54 @@ class _RecommendedSpotsScreenState extends State<RecommendedSpotsScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
-                      ? Center(
-                          child: Text(
-                            _error!,
-                            style: const TextStyle(
-                              color: Color(0xFF6A7B8C),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )
-                      : _spots.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No recommended spots found',
-                                style: TextStyle(
-                                  color: Color(0xFF6A7B8C),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            )
-                          : ListView.separated(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                              itemCount: _spots.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 14),
-                              itemBuilder: (context, index) {
-                                final _RecommendedSpot spot = _spots[index];
-                                return _RecommendedSpotCard(
-                                  data: spot,
-                                  onTap: () {
-                                    final query = <String, String>{};
-                                    if (spot.lat != null && spot.lng != null) {
-                                      query['lat'] = spot.lat.toString();
-                                      query['lng'] = spot.lng.toString();
-                                      query['distanceKm'] = '15';
-                                    }
-                                    if (spot.id != null && spot.id!.isNotEmpty) {
-                                      query['id'] = spot.id!;
-                                    }
-                                    final detailsUri = Uri(
-                                      path: HomeRouteNames.details,
-                                      queryParameters:
-                                          query.isEmpty ? null : query,
-                                    );
-                                    context.push(detailsUri.toString());
-                                  },
-                                );
-                              },
-                            ),
+                  ? Center(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          color: Color(0xFF6A7B8C),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  : _spots.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No recommended spots found',
+                        style: TextStyle(
+                          color: Color(0xFF6A7B8C),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                      itemCount: _spots.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 14),
+                      itemBuilder: (context, index) {
+                        final _RecommendedSpot spot = _spots[index];
+                        return _RecommendedSpotCard(
+                          data: spot,
+                          onTap: () {
+                            final query = <String, String>{};
+                            if (spot.lat != null && spot.lng != null) {
+                              query['lat'] = spot.lat.toString();
+                              query['lng'] = spot.lng.toString();
+                              query['distanceKm'] = '15';
+                            }
+                            if (spot.id != null && spot.id!.isNotEmpty) {
+                              query['id'] = spot.id!;
+                            }
+                            final detailsUri = Uri(
+                              path: HomeRouteNames.details,
+                              queryParameters: query.isEmpty ? null : query,
+                            );
+                            context.push(detailsUri.toString());
+                          },
+                        );
+                      },
+                    ),
             ),
           ],
         ),

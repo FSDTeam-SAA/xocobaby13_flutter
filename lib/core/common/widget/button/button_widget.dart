@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:xocobaby13/core/theme/app_colors.dart';
 import 'package:xocobaby13/core/theme/text_style.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 extension ButtonStyleExtensions on BuildContext {
   Widget primaryButton({
@@ -15,7 +16,7 @@ extension ButtonStyleExtensions on BuildContext {
     return SizedBox(
       width: width ?? 250,
       height: height ?? 52,
-      child: ElevatedButton(
+      child: AppElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primarybutton,
@@ -73,7 +74,7 @@ extension ButtonStyleExtensions on BuildContext {
 //     return SizedBox(
 //       width: width ?? 250,
 //       height: height ?? 48,
-//       child: ElevatedButton(
+//       child: AppElevatedButton(
 //         onPressed: isLoading ? null : onPressed,
 //         style: ElevatedButton.styleFrom(
 //           backgroundColor: AppColors.buttonbackgroundcolor,
