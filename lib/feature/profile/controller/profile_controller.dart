@@ -1,6 +1,7 @@
 import 'package:app_pigeon/app_pigeon.dart';
 import 'package:dio/dio.dart' as dio;
 import 'package:get/get.dart';
+import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:image_picker/image_picker.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/profile/model/activity_item_model.dart';
