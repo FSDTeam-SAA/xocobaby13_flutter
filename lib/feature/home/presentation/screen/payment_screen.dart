@@ -1,51 +1,180 @@
+import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class PaymentScreen extends StatefulWidget {
-  const PaymentScreen({super.key});
+  final String bookingId;
+  final double totalAmount;
+
+  const PaymentScreen({
+    super.key,
+    required this.bookingId,
+    required this.totalAmount,
+  });
 
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  final TextEditingController _cardNumberController = TextEditingController();
-  final TextEditingController _cardHolderController = TextEditingController();
-  final TextEditingController _expiryController = TextEditingController();
-  final TextEditingController _cvvController = TextEditingController();
+  bool _isPaying = false;
 
-  bool _useCard = true;
-  bool _saveCard = true;
-
-  @override
-  void dispose() {
-    _cardNumberController.dispose();
-    _cardHolderController.dispose();
-    _expiryController.dispose();
-    _cvvController.dispose();
-    super.dispose();
+  String get _amountLabel {
+    final double amount = widget.totalAmount.isNaN ? 0 : widget.totalAmount;
+    return '\$${amount.toStringAsFixed(2)}';
   }
 
-  void _payNow() {
-    final bool hasRequiredCardFields =
-        _cardNumberController.text.trim().isNotEmpty &&
-        _cardHolderController.text.trim().isNotEmpty &&
-        _expiryController.text.trim().isNotEmpty &&
-        _cvvController.text.trim().isNotEmpty;
+  String _extractSessionId(Map<String, dynamic> responseBody) {
+    String valueToText(dynamic value) => value?.toString().trim() ?? '';
 
-    if (_useCard && !hasRequiredCardFields) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill card details'),
-          behavior: SnackBarBehavior.floating,
-        ),
+    final List<dynamic> candidates = <dynamic>[
+      responseBody['sessionId'],
+      responseBody['id'],
+      responseBody['checkoutSessionId'],
+    ];
+    final dynamic data = responseBody['data'];
+    if (data is Map) {
+      candidates.addAll(<dynamic>[
+        data['sessionId'],
+        data['id'],
+        data['checkoutSessionId'],
+      ]);
+      final dynamic session = data['session'];
+      if (session is Map) {
+        candidates.add(session['id']);
+        candidates.add(session['sessionId']);
+      }
+    }
+
+    for (final dynamic candidate in candidates) {
+      final String value = valueToText(candidate);
+      if (value.isNotEmpty) return value;
+    }
+    return '';
+  }
+
+  String _responseMessage(dynamic responseData, {required String fallback}) {
+    if (responseData is Map && responseData['message'] != null) {
+      final String message = responseData['message'].toString().trim();
+      if (message.isNotEmpty) return message;
+    }
+    if (responseData is String && responseData.trim().isNotEmpty) {
+      return responseData.trim();
+    }
+    return fallback;
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  Future<dynamic> _createPaymentRequest() async {
+    final AuthorizedPigeon pigeon = Get.find<AuthorizedPigeon>();
+    try {
+      return await pigeon.post(
+        ApiEndpoints.paymentCreate,
+        data: <String, dynamic>{'bookingId': widget.bookingId},
       );
+    } on DioException catch (e) {
+      final int statusCode = e.response?.statusCode ?? 0;
+      if (statusCode == 404 || statusCode == 405) {
+        return pigeon.post(
+          ApiEndpoints.paymentCreateLegacy,
+          data: <String, dynamic>{'bookingId': widget.bookingId},
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<dynamic> _confirmPaymentRequest(String sessionId) async {
+    final AuthorizedPigeon pigeon = Get.find<AuthorizedPigeon>();
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'bookingId': widget.bookingId,
+      'sessionId': sessionId,
+    };
+    try {
+      return await pigeon.post(ApiEndpoints.paymentConfirm, data: payload);
+    } on DioException catch (e) {
+      final int statusCode = e.response?.statusCode ?? 0;
+      if (statusCode == 404 || statusCode == 405) {
+        return pigeon.post(ApiEndpoints.paymentConfirmLegacy, data: payload);
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _payNow() async {
+    if (_isPaying) return;
+    if (widget.bookingId.trim().isEmpty) {
+      _showMessage('Booking id is missing');
       return;
     }
-    context.push(HomeRouteNames.paymentSuccess);
+
+    setState(() => _isPaying = true);
+    try {
+      final createResponse = await _createPaymentRequest();
+      final Map<String, dynamic> createBody = createResponse.data is Map
+          ? Map<String, dynamic>.from(createResponse.data as Map)
+          : <String, dynamic>{};
+      final bool createSuccess = createBody['success'] == null
+          ? true
+          : createBody['success'] == true;
+      if (!createSuccess) {
+        if (!mounted) return;
+        _showMessage(
+          _responseMessage(createBody, fallback: 'Unable to create payment'),
+        );
+        return;
+      }
+
+      final String sessionId = _extractSessionId(createBody);
+      if (sessionId.isEmpty) {
+        if (!mounted) return;
+        _showMessage('Payment session id is missing');
+        return;
+      }
+
+      final confirmResponse = await _confirmPaymentRequest(sessionId);
+      final Map<String, dynamic> confirmBody = confirmResponse.data is Map
+          ? Map<String, dynamic>.from(confirmResponse.data as Map)
+          : <String, dynamic>{};
+      final bool confirmSuccess = confirmBody['success'] == null
+          ? (confirmResponse.statusCode ?? 500) < 300
+          : confirmBody['success'] == true;
+      if (!confirmSuccess) {
+        if (!mounted) return;
+        _showMessage(
+          _responseMessage(
+            confirmBody,
+            fallback: 'Payment confirmation failed',
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      context.pop(true);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      _showMessage(
+        _responseMessage(e.response?.data, fallback: 'Payment failed'),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('Payment failed');
+    } finally {
+      if (mounted) {
+        setState(() => _isPaying = false);
+      }
+    }
   }
 
   @override
@@ -60,7 +189,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               child: Row(
                 children: <Widget>[
                   GestureDetector(
-                    onTap: () => context.pop(),
+                    onTap: () => context.pop(false),
                     child: const Icon(
                       CupertinoIcons.back,
                       color: Color(0xFF1D2A36),
@@ -82,11 +211,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Column(
+                child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const SizedBox(height: 6),
-                    const Text(
+                    SizedBox(height: 6),
+                    Text(
                       'Choose Payment Method',
                       style: TextStyle(
                         fontSize: 10.5,
@@ -94,16 +223,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         color: Color(0xFF6A7B8C),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    _PaymentMethodTile(
-                      title: 'Credit/Debit Card',
-                      subtitle: 'Visa, Mastercard, Amex',
-                      selected: _useCard,
-                      onTap: () => setState(() => _useCard = true),
-                    ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     _PaymentMethodTile(
                       title: 'Stripe',
+                      subtitle: 'Pay securely with Stripe',
                       subtitle: 'Pay with Stripe',
                       selected: !_useCard,
                       onTap: () => setState(() => _useCard = false),
@@ -182,9 +305,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 color: const Color(0xFFF6FBFF),
                 child: Column(
                   children: <Widget>[
-                    const Row(
+                    Row(
                       children: <Widget>[
-                        Text(
+                        const Text(
                           'Total Amount',
                           style: TextStyle(
                             fontSize: 11,
@@ -192,10 +315,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             color: Color(0xFF1D2A36),
                           ),
                         ),
-                        Spacer(),
+                        const Spacer(),
                         Text(
-                          r'$120.00',
-                          style: TextStyle(
+                          _amountLabel,
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF1D2A36),
@@ -207,6 +330,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 36,
+                      child: ElevatedButton(
+                        onPressed: _isPaying ? null : _payNow,
                       child: AppElevatedButton(
                         onPressed: _payNow,
                         style: ElevatedButton.styleFrom(
@@ -216,14 +341,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          r'Pay $120.00  >',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: _isPaying
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                'Pay $_amountLabel  >',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -237,7 +373,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         ),
                         SizedBox(width: 4),
                         Text(
-                          'Your payment is secured and secure',
+                          'Your payment is secured',
                           style: TextStyle(
                             fontSize: 8.5,
                             color: Color(0xFF6A7B8C),
@@ -260,179 +396,60 @@ class _PaymentScreenState extends State<PaymentScreen> {
 class _PaymentMethodTile extends StatelessWidget {
   final String title;
   final String subtitle;
-  final bool selected;
-  final VoidCallback onTap;
 
-  const _PaymentMethodTile({
-    required this.title,
-    required this.subtitle,
-    required this.selected,
-    required this.onTap,
-  });
+  const _PaymentMethodTile({required this.title, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? const Color(0xFF1E7CC8) : const Color(0xFFD2DEE9),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1D2A36),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Color(0xFF7A8B9C),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected
-                      ? const Color(0xFF1E7CC8)
-                      : const Color(0xFF98A9BA),
-                ),
-              ),
-              child: selected
-                  ? const Center(
-                      child: CircleAvatar(
-                        radius: 4,
-                        backgroundColor: Color(0xFF1E7CC8),
-                      ),
-                    )
-                  : null,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  final String label;
-
-  const _FieldLabel({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: const TextStyle(
-        fontSize: 9.5,
-        fontWeight: FontWeight.w500,
-        color: Color(0xFF5A6B7C),
-      ),
-    );
-  }
-}
-
-class _PaymentInputField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hintText;
-  final TextInputType? keyboardType;
-
-  const _PaymentInputField({
-    required this.controller,
-    required this.hintText,
-    this.keyboardType,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 36,
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        style: const TextStyle(
-          fontSize: 11.5,
-          color: Color(0xFF1D2A36),
-          fontWeight: FontWeight.w500,
-        ),
-        decoration: InputDecoration(
-          isDense: true,
-          filled: true,
-          fillColor: Colors.white,
-          hintText: hintText,
-          hintStyle: const TextStyle(
-            fontSize: 10.5,
-            color: Color(0xFF9AA9B8),
-            fontWeight: FontWeight.w500,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 9,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: Color(0xFFD2DEE9)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: Color(0xFF1787CF), width: 1.1),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniToggle extends StatelessWidget {
-  final bool selected;
-
-  const _MiniToggle({required this.selected});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      width: 26,
-      height: 14,
-      padding: const EdgeInsets.all(2),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: selected ? const Color(0xFF1E7CC8) : const Color(0xFFD3DDE8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF1E7CC8), width: 1),
       ),
-      child: Align(
-        alignment: selected ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          width: 10,
-          height: 10,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1D2A36),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: Color(0xFF7A8B9C),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFF1E7CC8)),
+            ),
+            child: const Center(
+              child: CircleAvatar(
+                radius: 4,
+                backgroundColor: Color(0xFF1E7CC8),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

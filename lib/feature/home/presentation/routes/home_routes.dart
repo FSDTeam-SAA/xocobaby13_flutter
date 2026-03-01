@@ -48,7 +48,13 @@ class HomeRoutes {
     ),
     GoRoute(
       path: HomeRouteNames.payment,
-      builder: (context, state) => const PaymentScreen(),
+      builder: (context, state) {
+        final String bookingId =
+            state.uri.queryParameters['bookingId']?.trim() ?? '';
+        final double amount =
+            double.tryParse(state.uri.queryParameters['amount'] ?? '') ?? 0;
+        return PaymentScreen(bookingId: bookingId, totalAmount: amount);
+      },
     ),
     GoRoute(
       path: HomeRouteNames.paymentSuccess,

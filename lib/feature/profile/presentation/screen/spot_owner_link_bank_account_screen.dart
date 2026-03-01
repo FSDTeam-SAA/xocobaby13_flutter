@@ -6,7 +6,12 @@ import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profi
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class SpotOwnerLinkBankAccountScreen extends StatefulWidget {
-  const SpotOwnerLinkBankAccountScreen({super.key});
+  final String initialAccountNumber;
+
+  const SpotOwnerLinkBankAccountScreen({
+    super.key,
+    this.initialAccountNumber = '',
+  });
 
   @override
   State<SpotOwnerLinkBankAccountScreen> createState() =>
@@ -17,6 +22,16 @@ class _SpotOwnerLinkBankAccountScreenState
     extends State<SpotOwnerLinkBankAccountScreen> {
   final TextEditingController _accountController = TextEditingController();
   final TextEditingController _routingController = TextEditingController();
+  bool _showAccountNumber = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final String initialAccount = widget.initialAccountNumber.trim();
+    if (initialAccount.isNotEmpty) {
+      _accountController.text = initialAccount;
+    }
+  }
 
   @override
   void dispose() {
@@ -26,6 +41,17 @@ class _SpotOwnerLinkBankAccountScreenState
   }
 
   void _submit() {
+    final String accountNumber = _accountController.text.trim();
+    final String routingNumber = _routingController.text.trim();
+    if (accountNumber.isEmpty || routingNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill account and routing number'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     context.push(SpotOwnerProfileRouteNames.bankAccountSuccess);
   }
 
@@ -46,7 +72,22 @@ class _SpotOwnerLinkBankAccountScreenState
                     label: 'Account Number',
                     controller: _accountController,
                     hint: '•••• •••• ••••',
-                    keyboardType: TextInputType.number,
+                    obscureText: !_showAccountNumber,
+                    keyboardType: TextInputType.text,
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(
+                          () => _showAccountNumber = !_showAccountNumber,
+                        );
+                      },
+                      icon: Icon(
+                        _showAccountNumber
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: SpotOwnerProfilePalette.mutedText,
+                        size: 20,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   SpotOwnerProfileTextField(

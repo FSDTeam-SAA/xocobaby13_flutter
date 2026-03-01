@@ -105,6 +105,14 @@ base class ApiEndpoints {
   /// ### get
   static const String mtList = _Mt.list;
 
+  // ---------------------- Payment -----------------------------
+  /// ### post
+  static const String paymentOnboard = _Payment.onboard;
+  static const String paymentCreate = _Payment.create;
+  static const String paymentConfirm = _Payment.confirm;
+  static const String paymentCreateLegacy = _Payment.createLegacy;
+  static const String paymentConfirmLegacy = _Payment.confirmLegacy;
+
   // ---------------------- LICENSE -----------------------------
   /// ### post
   static const String createLicense = _License.create;
@@ -187,7 +195,9 @@ class _RemoteServer {
 
 class _LocalHostWifi {
   static const String socketUrl = 'http://localhost:5000';
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  // static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl =
+      'https://backend-xocobaby-rf6o.onrender.com/api/v1';
 }
 
 class _Auth {
@@ -240,7 +250,7 @@ class _Notification {
       '$_notificationRoute/$notificationId/read';
   static const String readAllNotifications = '$_notificationRoute/read-all';
   static const String markAllAsRead = '$_notificationRoute/read-all';
-  static const String getAllNotifications = '$_notificationRoute';
+  static const String getAllNotifications = _notificationRoute;
   static const String getUnreadCount = '$_notificationRoute/unread-count';
   static String deleteNotification(String notificationId) =>
       '$_notificationRoute/$notificationId';
@@ -278,6 +288,16 @@ class _Mt {
   static const String _mtRoute = '${ApiEndpoints.baseUrl}/mt';
   static const String connect = '$_mtRoute/connect';
   static const String list = '$_mtRoute/list';
+}
+
+// ---------------------- PAYMENT -----------------------------
+class _Payment {
+  static const String _paymentRoute = '${ApiEndpoints.baseUrl}/payment';
+  static const String onboard = '$_paymentRoute/onboard';
+  static const String create = _paymentRoute;
+  static const String confirm = '$_paymentRoute/confirm';
+  static const String createLegacy = '$_paymentRoute/create-payment';
+  static const String confirmLegacy = '$_paymentRoute/confirm-payment';
 }
 
 // ---------------------- LICENSE -----------------------------

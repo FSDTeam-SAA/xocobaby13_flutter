@@ -109,12 +109,31 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       final responseBody = response.data is Map
           ? Map<String, dynamic>.from(response.data as Map)
           : <String, dynamic>{};
-      final String message =
-          responseBody['message']?.toString() ?? 'Booking created';
+      final String bookingId = _extractBookingId(responseBody);
+      if (bookingId.isEmpty) {
+        if (!mounted) return;
+        _showMessage(context, 'Booking id missing in response');
+        return;
+      }
+      final double amount = _extractBookingAmount(responseBody);
+      final String paymentPath =
+          '${HomeRouteNames.payment}?bookingId=${Uri.encodeComponent(bookingId)}&amount=${Uri.encodeComponent(amount.toStringAsFixed(2))}';
       if (!mounted) return;
-      setState(() => _isBooked = true);
+      final bool? paid = await context.push<bool>(paymentPath);
+      if (!mounted) return;
+      if (paid == true) {
+        setState(() => _isBooked = true);
+        await _showBookingSuccessDialog();
+      }
+    } on DioException catch (e) {
+      final dynamic responseData = e.response?.data;
+      final String message =
+          responseData is Map && responseData['message'] != null
+          ? responseData['message'].toString()
+          : 'Failed to create booking';
+      if (!mounted) return;
       _showMessage(context, message);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       _showMessage(context, 'Failed to create booking');
     } finally {
@@ -124,6 +143,42 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
     }
   }
 
+  String _extractBookingId(Map<String, dynamic> responseBody) {
+    final dynamic data = responseBody['data'];
+    if (data is Map) {
+      final String bookingId =
+          data['_id']?.toString().trim() ?? data['id']?.toString().trim() ?? '';
+      if (bookingId.isNotEmpty) return bookingId;
+    }
+    return '';
+  }
+
+  double _extractBookingAmount(Map<String, dynamic> responseBody) {
+    final dynamic data = responseBody['data'];
+    if (data is Map) {
+      final double amount = _readDouble(data['totalAmount']);
+      if (amount > 0) return amount;
+    }
+    final double spotPrice = _readDouble(_spot?['price']);
+    return spotPrice > 0 ? spotPrice : 0;
+  }
+
+  Future<void> _showBookingSuccessDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Booking Successful'),
+          content: const Text('Your booking has been completed successfully.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   Future<void> _startChat() async {
     if (_isCreatingChat) return;
     final String ownerId = _readString(_spot?['owner']?['_id']);
@@ -313,6 +368,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       return images
           .map((dynamic item) {
             if (item is String) return item;
+            if (item is Map && item['url'] != null) {
+              return item['url'].toString();
+            }
             if (item is Map && item['url'] != null)
               return item['url'].toString();
             return '';
