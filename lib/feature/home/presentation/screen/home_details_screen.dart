@@ -98,21 +98,37 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         data: <String, dynamic>{
           'spotId': spotId,
           'date': _formatBookingDate(bookingDate),
-          'slot': <String, String>{
-            'start': '7:00 AM',
-            'end': '9:00 AM',
-          },
+          'slot': <String, String>{'start': '7:00 AM', 'end': '9:00 AM'},
         },
       );
       final responseBody = response.data is Map
           ? Map<String, dynamic>.from(response.data as Map)
           : <String, dynamic>{};
-      final String message =
-          responseBody['message']?.toString() ?? 'Booking created';
+      final String bookingId = _extractBookingId(responseBody);
+      if (bookingId.isEmpty) {
+        if (!mounted) return;
+        _showMessage(context, 'Booking id missing in response');
+        return;
+      }
+      final double amount = _extractBookingAmount(responseBody);
+      final String paymentPath =
+          '${HomeRouteNames.payment}?bookingId=${Uri.encodeComponent(bookingId)}&amount=${Uri.encodeComponent(amount.toStringAsFixed(2))}';
       if (!mounted) return;
-      setState(() => _isBooked = true);
+      final bool? paid = await context.push<bool>(paymentPath);
+      if (!mounted) return;
+      if (paid == true) {
+        setState(() => _isBooked = true);
+        await _showBookingSuccessDialog();
+      }
+    } on DioException catch (e) {
+      final dynamic responseData = e.response?.data;
+      final String message =
+          responseData is Map && responseData['message'] != null
+          ? responseData['message'].toString()
+          : 'Failed to create booking';
+      if (!mounted) return;
       _showMessage(context, message);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       _showMessage(context, 'Failed to create booking');
     } finally {
@@ -120,6 +136,44 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         setState(() => _isBooking = false);
       }
     }
+  }
+
+  String _extractBookingId(Map<String, dynamic> responseBody) {
+    final dynamic data = responseBody['data'];
+    if (data is Map) {
+      final String bookingId =
+          data['_id']?.toString().trim() ?? data['id']?.toString().trim() ?? '';
+      if (bookingId.isNotEmpty) return bookingId;
+    }
+    return '';
+  }
+
+  double _extractBookingAmount(Map<String, dynamic> responseBody) {
+    final dynamic data = responseBody['data'];
+    if (data is Map) {
+      final double amount = _readDouble(data['totalAmount']);
+      if (amount > 0) return amount;
+    }
+    final double spotPrice = _readDouble(_spot?['price']);
+    return spotPrice > 0 ? spotPrice : 0;
+  }
+
+  Future<void> _showBookingSuccessDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Booking Successful'),
+          content: const Text('Your booking has been completed successfully.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _loadSpot() async {
@@ -230,7 +284,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       return images
           .map((dynamic item) {
             if (item is String) return item;
-            if (item is Map && item['url'] != null) return item['url'].toString();
+            if (item is Map && item['url'] != null) {
+              return item['url'].toString();
+            }
             return '';
           })
           .where((String url) => url.isNotEmpty)
@@ -324,11 +380,11 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
                                   Container(
-                                width: 72,
-                                height: 56,
-                                color: const Color(0xFFE2E8F1),
-                                child: const Icon(Icons.photo, size: 20),
-                              ),
+                                    width: 72,
+                                    height: 56,
+                                    color: const Color(0xFFE2E8F1),
+                                    child: const Icon(Icons.photo, size: 20),
+                                  ),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -404,8 +460,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       initialValue: selectedReason,
                       icon: const Icon(Icons.keyboard_arrow_down),
                       decoration: InputDecoration(
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
                         hintText: 'Select a reason',
@@ -415,8 +472,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFD2DEE9)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFD2DEE9),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -489,14 +547,17 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
   Widget build(BuildContext context) {
     final Map<String, dynamic>? spot = _spot;
     final List<String> photos = _readImages(spot?['images']);
-    final List<String> galleryPhotos =
-        photos.isEmpty ? _fallbackPhotos : photos;
+    final List<String> galleryPhotos = photos.isEmpty
+        ? _fallbackPhotos
+        : photos;
     final int safePhotoIndex = _selectedPhotoIndex.clamp(
       0,
       galleryPhotos.isEmpty ? 0 : galleryPhotos.length - 1,
     );
-    final String title =
-        _readString(spot?['title'], fallback: 'Crystal Lake Sanctuary');
+    final String title = _readString(
+      spot?['title'],
+      fallback: 'Crystal Lake Sanctuary',
+    );
     final String description = _readString(
       spot?['description'],
       fallback:
@@ -507,13 +568,15 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
     final int reviews = _readInt(spot?['ratingCount']);
     final String dateLabel = _formatDate(spot?['createdAt']?.toString());
     final List<String> features = _readTags(spot?['features']);
-    final String hostName =
-        _readString(spot?['owner']?['fullName'], fallback: 'John Mitchell');
-    final String hostAvatar =
-        _readString(spot?['owner']?['avatar']?['url']);
+    final String hostName = _readString(
+      spot?['owner']?['fullName'],
+      fallback: 'John Mitchell',
+    );
+    final String hostAvatar = _readString(spot?['owner']?['avatar']?['url']);
     final String locationLabel = _formatLocation(spot?['location']);
     final LatLng? spotLatLng = _readLatLng(spot?['location']);
-    final LatLng mapCenter = spotLatLng ??
+    final LatLng mapCenter =
+        spotLatLng ??
         ((widget.lat != null && widget.lng != null)
             ? LatLng(widget.lat!, widget.lng!)
             : const LatLng(39.8283, -98.5795));
@@ -522,18 +585,13 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       zoom: _zoomForDistance(widget.distanceKm),
     );
     final Set<Marker> mapMarkers = <Marker>{
-      Marker(
-        markerId: const MarkerId('spot'),
-        position: mapCenter,
-      ),
+      Marker(markerId: const MarkerId('spot'), position: mapCenter),
     };
 
     if (_isLoadingSpot && spot == null) {
       return const Scaffold(
         backgroundColor: Color(0xFFF2F9FF),
-        body: SafeArea(
-          child: Center(child: CircularProgressIndicator()),
-        ),
+        body: SafeArea(child: Center(child: CircularProgressIndicator())),
       );
     }
 
@@ -631,11 +689,14 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                                     errorBuilder:
                                         (context, error, stackTrace) =>
                                             Container(
-                                      width: 62,
-                                      height: 62,
-                                      color: const Color(0xFFE2E8F1),
-                                      child: const Icon(Icons.photo, size: 24),
-                                    ),
+                                              width: 62,
+                                              height: 62,
+                                              color: const Color(0xFFE2E8F1),
+                                              child: const Icon(
+                                                Icons.photo,
+                                                size: 24,
+                                              ),
+                                            ),
                                   ),
                                 ),
                               ),
@@ -910,8 +971,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       children: <Widget>[
                         CircleAvatar(
                           radius: 17,
-                          backgroundImage:
-                              hostAvatar.isNotEmpty ? NetworkImage(hostAvatar) : null,
+                          backgroundImage: hostAvatar.isNotEmpty
+                              ? NetworkImage(hostAvatar)
+                              : null,
                           backgroundColor: const Color(0xFFE2E8F1),
                           child: hostAvatar.isEmpty
                               ? const Icon(
@@ -1100,8 +1162,8 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       onPressed: _isBooking
                           ? null
                           : _isBooked
-                              ? _openCancellationSheet
-                              : _createBooking,
+                          ? _openCancellationSheet
+                          : _createBooking,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1787CF),
                         elevation: 0,
@@ -1115,8 +1177,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : Text(

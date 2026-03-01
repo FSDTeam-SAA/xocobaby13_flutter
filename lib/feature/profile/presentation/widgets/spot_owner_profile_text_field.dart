@@ -8,6 +8,7 @@ class SpotOwnerProfileTextField extends StatelessWidget {
   final bool obscureText;
   final int maxLines;
   final TextInputType keyboardType;
+  final Widget? suffixIcon;
 
   const SpotOwnerProfileTextField({
     super.key,
@@ -17,6 +18,7 @@ class SpotOwnerProfileTextField extends StatelessWidget {
     this.obscureText = false,
     this.maxLines = 1,
     this.keyboardType = TextInputType.text,
+    this.suffixIcon,
   });
 
   @override
@@ -72,6 +74,7 @@ class SpotOwnerProfileTextField extends StatelessWidget {
                 width: 1.2,
               ),
             ),
+            suffixIcon: suffixIcon,
           ),
         ),
       ],
