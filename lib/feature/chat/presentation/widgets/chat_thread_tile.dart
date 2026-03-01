@@ -22,10 +22,12 @@ class ChatThreadTile extends StatelessWidget {
             CircleAvatar(
               radius: 22,
               backgroundColor: thread.avatarColor,
-              backgroundImage: thread.avatarAssetPath.isNotEmpty
+              backgroundImage: thread.avatarUrl.isNotEmpty
+                  ? NetworkImage(thread.avatarUrl)
+                  : thread.avatarAssetPath.isNotEmpty
                   ? AssetImage(thread.avatarAssetPath)
                   : null,
-              child: thread.avatarAssetPath.isEmpty
+              child: thread.avatarUrl.isEmpty && thread.avatarAssetPath.isEmpty
                   ? Text(
                       thread.avatarLabel,
                       style: const TextStyle(

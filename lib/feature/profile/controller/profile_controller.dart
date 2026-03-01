@@ -1,8 +1,6 @@
 import 'package:app_pigeon/app_pigeon.dart';
+import 'package:dio/dio.dart' as dio;
 import 'package:get/get.dart';
-import 'package:app_pigeon/app_pigeon.dart' hide FormData, MultipartFile;
-import 'package:dio/dio.dart';
-import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:image_picker/image_picker.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/profile/model/activity_item_model.dart';
@@ -20,11 +18,11 @@ class ProfileController extends GetxController {
   XFile? _pendingAvatarFile;
 
   final Rx<UserProfileDataModel> profile = const UserProfileDataModel(
-    name: 'Mr. Mack',
+    name: 'Unknown User',
     email: 'you@gmail.com',
-    phone: '(217) 555-0113',
+    phone: '(000) 000-0000',
     description: '',
-    avatarAssetPath: 'assets/onboarding/avatar_mr_raja.jpg',
+    avatarAssetPath: 'assets/images/Profile_avatar_placeholder_large.png',
     avatarUrl: '',
     avatarBytes: null,
   ).obs;
@@ -40,6 +38,7 @@ class ProfileController extends GetxController {
   void onInit() {
     super.onInit();
     fetchProfile();
+    loadActivities();
   }
 
   Future<void> fetchProfile() async {
@@ -72,13 +71,7 @@ class ProfileController extends GetxController {
           (ActivityItemModel item) =>
               item.status == selectedActivityStatus.value,
         )
-      .toList();
-  }
-
-  @override
-  void onInit() {
-    super.onInit();
-    loadActivities();
+        .toList();
   }
 
   Future<void> loadActivities() async {
@@ -280,13 +273,13 @@ class ProfileController extends GetxController {
     required String bio,
   }) async {
     try {
-      final formData = FormData.fromMap(<String, dynamic>{
+      final formData = dio.FormData.fromMap(<String, dynamic>{
         'fullName': fullName,
         'email': email,
         'phone': phone,
         'bio': bio,
         if (_pendingAvatarFile != null)
-          'avatar': await MultipartFile.fromFile(
+          'avatar': await dio.MultipartFile.fromFile(
             _pendingAvatarFile!.path,
             filename: _pendingAvatarFile!.name,
           ),
@@ -295,7 +288,7 @@ class ProfileController extends GetxController {
       final response = await _appPigeon.put(
         ApiEndpoints.getCurrentProfile,
         data: formData,
-        options: Options(contentType: 'multipart/form-data'),
+        options: dio.Options(contentType: 'multipart/form-data'),
       );
       final statusCode = response.statusCode ?? 0;
       if (statusCode < 200 || statusCode >= 300) {

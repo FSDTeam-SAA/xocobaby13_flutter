@@ -1,6 +1,9 @@
+import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:xocobaby13/feature/chat/model/chat_sample_data.dart';
+import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/feature/chat/model/chat_api_mapper.dart';
 import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
 import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_search_field.dart';
@@ -23,13 +26,16 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  late final List<ChatThreadModel> _threads;
+  List<ChatThreadModel> _threads = <ChatThreadModel>[];
+  bool _isLoading = false;
+  String? _loadError;
+  String _currentUserId = '';
 
   @override
   void initState() {
     super.initState();
-    _threads = ChatSampleData.threads;
     _searchController.addListener(_onSearchChanged);
+    _loadThreads();
   }
 
   @override
@@ -41,6 +47,84 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   void _onSearchChanged() {
     setState(() {});
+  }
+
+  Future<void> _loadThreads() async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+    try {
+      _currentUserId = await _resolveCurrentUserId();
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.getAllChat,
+      );
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final data = responseBody['data'];
+      final List<ChatThreadModel> threads = <ChatThreadModel>[];
+      if (data is List) {
+        for (final dynamic item in data) {
+          if (item is Map) {
+            threads.add(
+              ChatApiMapper.threadFromChatListItem(
+                Map<String, dynamic>.from(item),
+                _currentUserId,
+              ),
+            );
+          }
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _threads = threads;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = 'Failed to load chats';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<String> _resolveCurrentUserId() async {
+    try {
+      final authRecord = await Get.find<AuthorizedPigeon>()
+          .getCurrentAuthRecord();
+      final Map<String, dynamic> data = authRecord?.data is Map
+          ? Map<String, dynamic>.from(authRecord!.data as Map)
+          : <String, dynamic>{};
+      final dynamic raw = authRecord?.toJson();
+      final Map<String, dynamic> record = raw is Map
+          ? Map<String, dynamic>.from(raw as Map)
+          : <String, dynamic>{};
+      return _pickFirstString(<dynamic>[
+        data['id'],
+        data['_id'],
+        data['userId'],
+        record['uid'],
+        record['userId'],
+        record['user_id'],
+        record['id'],
+        record['_id'],
+      ]);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _pickFirstString(List<dynamic> values) {
+    for (final dynamic value in values) {
+      final String text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty) {
+        return text;
+      }
+    }
+    return '';
   }
 
   List<ChatThreadModel> get _filteredThreads {
@@ -102,21 +186,52 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ChatSearchField(controller: _searchController),
                   const SizedBox(height: 14),
                   Expanded(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.only(bottom: 120),
-                      itemCount: _filteredThreads.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (BuildContext context, int index) {
-                        final ChatThreadModel thread = _filteredThreads[index];
-                        return ChatThreadTile(
-                          thread: thread,
-                          onTap: () => context.push(
-                            ChatRouteNames.detail,
-                            extra: thread,
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _loadError != null
+                        ? Center(
+                            child: Text(
+                              _loadError ?? 'Failed to load chats',
+                              style: const TextStyle(
+                                color: ChatPalette.subtitleText,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          )
+                        : _filteredThreads.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No chats yet',
+                              style: TextStyle(
+                                color: ChatPalette.subtitleText,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.only(bottom: 120),
+                            itemCount: _filteredThreads.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (BuildContext context, int index) {
+                              final ChatThreadModel thread =
+                                  _filteredThreads[index];
+                              return ChatThreadTile(
+                                thread: thread,
+                                onTap: () async {
+                                  await context.push(
+                                    ChatRouteNames.detail,
+                                    extra: thread,
+                                  );
+                                  if (mounted) {
+                                    _loadThreads();
+                                  }
+                                },
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
                   ),
                 ],
               ),

@@ -130,20 +130,20 @@ class _PersonalDetailsScreenState
             ProfileTextField(
               label: 'Full name',
               controller: _nameController,
-              hint: 'Mr. Mack',
+              hint: 'Khalid Hossain',
             ),
             const SizedBox(height: 14),
             ProfileTextField(
               label: 'Email address',
               controller: _emailController,
-              hint: 'you@gmail.com',
+              hint: 'khalid@gmail.com',
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 14),
             ProfileTextField(
               label: 'Phone Number',
               controller: _phoneController,
-              hint: '(217) 555-0113',
+              hint: '(000) 000-0000',
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 14),
