@@ -33,19 +33,19 @@ class AppRouter {
       final bool isAuthed = authStatus is Authenticated;
 
       if (isAuthed) {
-        final String role = (authStatus as Authenticated).auth.data['role']
-            ?.toString()
-            .trim() ??
+        final String role =
+            (authStatus as Authenticated).auth.data['role']
+                ?.toString()
+                .trim() ??
             '';
         final String targetNav = _navRouteForRole(role);
         final bool isSpotOwner = _isSpotOwnerRole(role);
         final bool isFishermanProfileRoute =
             location == ProfileRouteNames.home ||
-                location.startsWith('${ProfileRouteNames.home}/');
+            location.startsWith('${ProfileRouteNames.home}/');
         final bool isSpotOwnerProfileRoute =
             location == SpotOwnerProfileRouteNames.home ||
-                location
-                    .startsWith('${SpotOwnerProfileRouteNames.home}/');
+            location.startsWith('${SpotOwnerProfileRouteNames.home}/');
 
         if (isSpotOwner && isFishermanProfileRoute) {
           return SpotOwnerProfileRouteNames.home;

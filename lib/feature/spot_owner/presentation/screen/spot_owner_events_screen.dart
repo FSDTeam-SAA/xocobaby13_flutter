@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/navigation/controller/navigation_controller.dart';
 import 'package:xocobaby13/feature/spot_owner/presentation/routes/spot_owner_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class SpotOwnerEventsScreen extends StatefulWidget {
   const SpotOwnerEventsScreen({super.key});
@@ -32,8 +33,9 @@ class _SpotOwnerEventsScreenState extends State<SpotOwnerEventsScreen> {
 
   String _formatLocation(dynamic locationRaw) {
     if (locationRaw is Map) {
-      final Map<String, dynamic> location =
-          Map<String, dynamic>.from(locationRaw);
+      final Map<String, dynamic> location = Map<String, dynamic>.from(
+        locationRaw,
+      );
       final String address = _readString(location['address']);
       final String city = _readString(location['city']);
       final String country = _readString(location['country']);
@@ -425,7 +427,7 @@ class _EventCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   height: 36,
-                  child: ElevatedButton(
+                  child: AppElevatedButton(
                     onPressed: onViewDetails,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1787CF),

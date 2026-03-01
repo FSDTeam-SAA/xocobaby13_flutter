@@ -6,6 +6,7 @@ import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
 import 'package:xocobaby13/feature/auth/interface/auth_interface.dart';
 import 'package:xocobaby13/feature/auth/model/logout_request_model.dart';
 import 'package:xocobaby13/feature/auth/presentation/routes/auth_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class FishermanLogoutScreen extends StatefulWidget {
   const FishermanLogoutScreen({super.key});
@@ -76,7 +77,7 @@ class _FishermanLogoutScreenState extends State<FishermanLogoutScreen> {
                 Expanded(
                   child: SizedBox(
                     height: 50,
-                    child: ElevatedButton(
+                    child: AppElevatedButton(
                       onPressed: () => context.pop(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFE5E5E5),
@@ -100,7 +101,7 @@ class _FishermanLogoutScreenState extends State<FishermanLogoutScreen> {
                 Expanded(
                   child: SizedBox(
                     height: 50,
-                    child: ElevatedButton.icon(
+                    child: AppElevatedButton.icon(
                       onPressed: _isLoading ? null : _handleLogout,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFD70000),

@@ -9,6 +9,7 @@ import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_search_field.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_style.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_thread_tile.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class ChatListScreen extends StatefulWidget {
   final Color backgroundColor;
@@ -161,7 +162,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   const SizedBox(height: 6),
                   Row(
                     children: <Widget>[
-                      IconButton(
+                      AppIconButton(
                         onPressed: () => Navigator.of(context).maybePop(),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),

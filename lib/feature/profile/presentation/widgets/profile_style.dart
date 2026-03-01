@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class ProfilePalette {
   const ProfilePalette._();
@@ -64,7 +65,7 @@ class ProfileFlowScaffold extends StatelessWidget {
                 Row(
                   children: <Widget>[
                     if (showBack)
-                      IconButton(
+                      AppIconButton(
                         onPressed: () => context.pop(),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),

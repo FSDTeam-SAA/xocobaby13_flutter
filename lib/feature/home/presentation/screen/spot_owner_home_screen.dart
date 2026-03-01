@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
 import 'package:xocobaby13/feature/spot_owner/presentation/routes/spot_owner_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class SpotOwnerHomeScreen extends StatefulWidget {
   const SpotOwnerHomeScreen({super.key});
@@ -77,8 +78,9 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
 
   String _formatLocation(dynamic locationRaw) {
     if (locationRaw is Map) {
-      final Map<String, dynamic> location =
-          Map<String, dynamic>.from(locationRaw);
+      final Map<String, dynamic> location = Map<String, dynamic>.from(
+        locationRaw,
+      );
       final String address = _readString(location['address']);
       final String city = _readString(location['city']);
       final String country = _readString(location['country']);
@@ -158,10 +160,8 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
       if (data is List) {
         for (final dynamic item in data) {
           if (item is Map) {
-            final Map<String, dynamic> spot =
-                Map<String, dynamic>.from(item);
-            final String status =
-                _readString(spot['status']).toLowerCase();
+            final Map<String, dynamic> spot = Map<String, dynamic>.from(item);
+            final String status = _readString(spot['status']).toLowerCase();
             if (status == 'running') {
               events.add(_mapSpotToEvent(spot));
             }
@@ -224,9 +224,7 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
                       _loadUnreadCount();
                     }
                   },
-                  child: _SpotOwnerNotificationBell(
-                    unreadCount: _unreadCount,
-                  ),
+                  child: _SpotOwnerNotificationBell(unreadCount: _unreadCount),
                 ),
               ],
             ),
@@ -639,7 +637,7 @@ class _SpotOwnerEventCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   height: 32,
-                  child: ElevatedButton(
+                  child: AppElevatedButton(
                     onPressed: onAnalytics,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1787CF),

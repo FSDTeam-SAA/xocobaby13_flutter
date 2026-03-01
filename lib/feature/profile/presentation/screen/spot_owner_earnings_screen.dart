@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_style.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class SpotOwnerEarningsScreen extends StatefulWidget {
   const SpotOwnerEarningsScreen({super.key});
@@ -23,8 +24,9 @@ class _SpotOwnerEarningsScreenState extends State<SpotOwnerEarningsScreen> {
 
   Future<_EarningsData> _fetchEarnings() async {
     try {
-      final response = await Get.find<AuthorizedPigeon>()
-          .get(ApiEndpoints.ownerEarnings);
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.ownerEarnings,
+      );
       final statusCode = response.statusCode ?? 0;
       if (statusCode < 200 || statusCode >= 300) {
         return _EarningsData.fallback();
@@ -62,8 +64,9 @@ class _SpotOwnerEarningsScreenState extends State<SpotOwnerEarningsScreen> {
 
       return _EarningsData(
         totalEarnings: totalEarnings.isNotEmpty ? totalEarnings : r'$0.0k',
-        percentageLabel:
-            percentageChange.isNotEmpty ? percentageChange : '+ 36%',
+        percentageLabel: percentageChange.isNotEmpty
+            ? percentageChange
+            : '+ 36%',
         items: items.isNotEmpty ? items : _EarningsData.fallbackItems(),
       );
     } catch (_) {
@@ -76,8 +79,7 @@ class _SpotOwnerEarningsScreenState extends State<SpotOwnerEarningsScreen> {
     return FutureBuilder<_EarningsData>(
       future: _earningsFuture,
       builder: (BuildContext context, AsyncSnapshot<_EarningsData> snapshot) {
-        final _EarningsData data =
-            snapshot.data ?? _EarningsData.fallback();
+        final _EarningsData data = snapshot.data ?? _EarningsData.fallback();
         const Color deltaColor = SpotOwnerProfilePalette.successGreen;
         const IconData deltaIcon = Icons.arrow_upward;
 
@@ -92,7 +94,7 @@ class _SpotOwnerEarningsScreenState extends State<SpotOwnerEarningsScreen> {
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        IconButton(
+                        AppIconButton(
                           onPressed: () => Navigator.of(context).maybePop(),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -171,11 +173,7 @@ class _SpotOwnerEarningsScreenState extends State<SpotOwnerEarningsScreen> {
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              Icon(
-                                deltaIcon,
-                                size: 18,
-                                color: deltaColor,
-                              ),
+                              Icon(deltaIcon, size: 18, color: deltaColor),
                             ],
                           ),
                         ],

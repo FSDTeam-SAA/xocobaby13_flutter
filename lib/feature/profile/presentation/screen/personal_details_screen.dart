@@ -6,17 +6,16 @@ import 'package:xocobaby13/feature/profile/model/user_profile_data_model.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_avatar.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_text_field.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class PersonalDetailsScreen extends StatefulWidget {
   const PersonalDetailsScreen({super.key});
 
   @override
-  State<PersonalDetailsScreen> createState() =>
-      _PersonalDetailsScreenState();
+  State<PersonalDetailsScreen> createState() => _PersonalDetailsScreenState();
 }
 
-class _PersonalDetailsScreenState
-    extends State<PersonalDetailsScreen> {
+class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
@@ -36,18 +35,17 @@ class _PersonalDetailsScreenState
     _phoneController = TextEditingController(text: profile.phone);
     _descriptionController = TextEditingController(text: profile.description);
 
-    _profileWorker = ever<UserProfileDataModel>(
-      _controller.profile,
-      (UserProfileDataModel profile) {
-        if (!mounted) return;
-        _draft = profile;
-        _nameController.text = profile.name;
-        _emailController.text = profile.email;
-        _phoneController.text = profile.phone;
-        _descriptionController.text = profile.description;
-        setState(() {});
-      },
-    );
+    _profileWorker = ever<UserProfileDataModel>(_controller.profile, (
+      UserProfileDataModel profile,
+    ) {
+      if (!mounted) return;
+      _draft = profile;
+      _nameController.text = profile.name;
+      _emailController.text = profile.email;
+      _phoneController.text = profile.phone;
+      _descriptionController.text = profile.description;
+      setState(() {});
+    });
   }
 
   @override
@@ -157,7 +155,7 @@ class _PersonalDetailsScreenState
             SizedBox(
               width: double.infinity,
               height: 44,
-              child: ElevatedButton(
+              child: AppElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ProfilePalette.blue,

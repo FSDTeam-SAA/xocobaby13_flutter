@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class RefundRequestScreen extends StatelessWidget {
   const RefundRequestScreen({super.key});
@@ -88,7 +89,7 @@ class RefundRequestScreen extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   height: 44,
-                  child: ElevatedButton(
+                  child: AppElevatedButton(
                     onPressed: () => context.go(NavigationRouteNames.main),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1787CF),

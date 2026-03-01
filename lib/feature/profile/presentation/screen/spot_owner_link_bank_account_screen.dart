@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/profile/presentation/routes/spot_owner_profile_routes.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_style.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_text_field.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class SpotOwnerLinkBankAccountScreen extends StatefulWidget {
   const SpotOwnerLinkBankAccountScreen({super.key});
@@ -62,7 +63,7 @@ class _SpotOwnerLinkBankAccountScreenState
           SizedBox(
             width: double.infinity,
             height: 44,
-            child: ElevatedButton(
+            child: AppElevatedButton(
               onPressed: _submit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: SpotOwnerProfilePalette.blue,

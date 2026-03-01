@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_style.dart';
 
 class ChatInputBar extends StatefulWidget {
@@ -9,6 +10,7 @@ class ChatInputBar extends StatefulWidget {
   final VoidCallback? onAttach;
   final List<String> attachmentPaths;
   final ValueChanged<int>? onRemoveAttachment;
+  final bool isSending;
 
   const ChatInputBar({
     super.key,
@@ -17,6 +19,7 @@ class ChatInputBar extends StatefulWidget {
     this.onAttach,
     this.attachmentPaths = const <String>[],
     this.onRemoveAttachment,
+    this.isSending = false,
   });
 
   @override
@@ -198,20 +201,23 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 ),
               ),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: widget.onSend,
-                child: Container(
+              AppIconButton(
+                onPressed: widget.onSend,
+                isLoading: widget.isSending,
+                loadingColor: Colors.white,
+                icon: const Icon(
+                  Icons.arrow_upward,
+                  size: 16,
+                  color: Colors.white,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: ChatPalette.actionBlue,
+                  shape: const CircleBorder(),
+                  padding: EdgeInsets.zero,
+                ),
+                constraints: const BoxConstraints.tightFor(
                   width: 32,
                   height: 32,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: ChatPalette.actionBlue,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_upward,
-                    size: 16,
-                    color: Colors.white,
-                  ),
                 ),
               ),
             ],

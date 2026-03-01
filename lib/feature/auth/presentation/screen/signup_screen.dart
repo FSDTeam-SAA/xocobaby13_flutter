@@ -6,6 +6,7 @@ import 'package:xocobaby13/feature/auth/presentation/widgets/auth_style.dart';
 import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart';
 import 'package:xocobaby13/feature/auth/controller/register_controller.dart';
 import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 enum SignupRole { fisherman, spotOwner }
 
@@ -143,7 +144,7 @@ class _SignupScreenState extends State<SignupScreen> {
             controller: _passwordController,
             obscureText: _obscurePassword,
             onChanged: (value) => _registerController.password = value,
-            suffixIcon: IconButton(
+            suffixIcon: AppIconButton(
               onPressed: () {
                 setState(() => _obscurePassword = !_obscurePassword);
               },

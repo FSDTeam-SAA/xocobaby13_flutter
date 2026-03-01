@@ -11,6 +11,7 @@ import 'package:xocobaby13/feature/chat/model/chat_api_mapper.dart';
 import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
 import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class HomeDetailsScreen extends StatefulWidget {
   final bool isBooked;
@@ -536,7 +537,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 42,
-                      child: ElevatedButton(
+                      child: AppElevatedButton(
                         onPressed: selectedReason == null
                             ? null
                             : () {
@@ -1046,7 +1047,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                         ),
                         SizedBox(
                           height: 32,
-                          child: ElevatedButton(
+                          child: AppElevatedButton(
                             onPressed: _startChat,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF1787CF),
@@ -1184,7 +1185,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     height: 52,
-                    child: ElevatedButton(
+                    child: AppElevatedButton(
                       onPressed: _isBooking
                           ? null
                           : _isBooked

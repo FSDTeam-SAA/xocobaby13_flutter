@@ -45,7 +45,10 @@ class ProfileTextField extends StatelessWidget {
           ),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle:  TextStyle(color: Color(0xFFA8ADB7).withOpacity(0.1), fontSize: 14),
+            hintStyle: TextStyle(
+              color: Color(0xFFA8ADB7).withOpacity(0.1),
+              fontSize: 14,
+            ),
             filled: true,
             fillColor: ProfilePalette.card,
             contentPadding: const EdgeInsets.symmetric(

@@ -6,6 +6,7 @@ import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class SpotOwnerCreateSpotScreen extends StatefulWidget {
   const SpotOwnerCreateSpotScreen({super.key});
@@ -21,10 +22,12 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _countryController = TextEditingController();
-  final TextEditingController _latController =
-      TextEditingController(text: '23.8103');
-  final TextEditingController _lngController =
-      TextEditingController(text: '90.4125');
+  final TextEditingController _latController = TextEditingController(
+    text: '23.8103',
+  );
+  final TextEditingController _lngController = TextEditingController(
+    text: '90.4125',
+  );
   final TextEditingController _priceController = TextEditingController();
 
   DateTime? _selectedDate;
@@ -34,7 +37,10 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
   String _availableSlots = '';
   String _waterType = 'Pond';
   final Set<String> _facilities = <String>{'Seating Area', 'Fishing Platform'};
-  final Set<String> _restrictions = <String>{'waste dumping', 'Commercial filming'};
+  final Set<String> _restrictions = <String>{
+    'waste dumping',
+    'Commercial filming',
+  };
   List<XFile> _selectedImages = <XFile>[];
   bool _isSubmitting = false;
 
@@ -98,7 +104,6 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
     return _toTime ?? const TimeOfDay(hour: 18, minute: 0);
   }
 
-
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
     final DateTime initial = _selectedDate ?? DateTime(2026, 1, 21);
@@ -116,7 +121,8 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
   }
 
   Future<void> _pickTimeRange() async {
-    final TimeOfDay initialFrom = _fromTime ?? const TimeOfDay(hour: 16, minute: 0);
+    final TimeOfDay initialFrom =
+        _fromTime ?? const TimeOfDay(hour: 16, minute: 0);
     final TimeOfDay? from = await showTimePicker(
       context: context,
       initialTime: initialFrom,
@@ -153,8 +159,7 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
 
     String cleanNumber(String value) =>
         value.replaceAll(RegExp(r'[^0-9.\-]'), '');
-    double? parseNumber(String value) =>
-        double.tryParse(cleanNumber(value));
+    double? parseNumber(String value) => double.tryParse(cleanNumber(value));
 
     if (title.isEmpty) {
       _showMessage('Title is required');
@@ -231,10 +236,7 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
         formData.files.add(
           MapEntry<String, MultipartFile>(
             'images',
-            await MultipartFile.fromFile(
-              file.path,
-              filename: file.name,
-            ),
+            await MultipartFile.fromFile(file.path, filename: file.name),
           ),
         );
       }
@@ -253,7 +255,8 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
       Navigator.of(context).pop();
     } on DioException catch (e) {
       final responseData = e.response?.data;
-      final String message = responseData is Map && responseData['message'] != null
+      final String message =
+          responseData is Map && responseData['message'] != null
           ? responseData['message'].toString()
           : responseData is String && responseData.isNotEmpty
           ? responseData
@@ -280,7 +283,7 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
         child: SizedBox(
           width: double.infinity,
           height: 52,
-          child: ElevatedButton(
+          child: AppElevatedButton(
             onPressed: _isSubmitting ? null : _submitSpot,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1787CF),
@@ -349,7 +352,8 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
                 const SizedBox(height: 8),
                 _InputField(
                   controller: _descriptionController,
-                  hintText: 'Describe the water, species of fish, and\naccess points ...',
+                  hintText:
+                      'Describe the water, species of fish, and\naccess points ...',
                   maxLines: 4,
                   height: 96,
                 ),
@@ -789,10 +793,8 @@ class _DropdownField extends StatelessWidget {
           ),
           items: items
               .map(
-                (String item) => DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(item),
-                ),
+                (String item) =>
+                    DropdownMenuItem<String>(value: item, child: Text(item)),
               )
               .toList(),
           onChanged: onChanged,
@@ -817,8 +819,9 @@ class _WaterTypeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color borderColor =
-        selected ? const Color(0xFF1787CF) : const Color(0xFFB5D7F7);
+    final Color borderColor = selected
+        ? const Color(0xFF1787CF)
+        : const Color(0xFFB5D7F7);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -836,10 +839,14 @@ class _WaterTypeOption extends StatelessWidget {
               assetPath,
               width: 38,
               height: 38,
-              color: selected ? const Color(0xFF1787CF) : const Color(0xFF1E7CC8),
+              color: selected
+                  ? const Color(0xFF1787CF)
+                  : const Color(0xFF1E7CC8),
               errorBuilder: (_, __, ___) => Icon(
                 CupertinoIcons.drop,
-                color: selected ? const Color(0xFF1787CF) : const Color(0xFF1E7CC8),
+                color: selected
+                    ? const Color(0xFF1787CF)
+                    : const Color(0xFF1E7CC8),
                 size: 26,
               ),
             ),
@@ -957,8 +964,9 @@ class _SelectableChip extends StatelessWidget {
                 color: selected ? const Color(0xFF1787CF) : Colors.white,
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
-                  color:
-                      selected ? const Color(0xFF1787CF) : const Color(0xFF1D2A36),
+                  color: selected
+                      ? const Color(0xFF1787CF)
+                      : const Color(0xFF1D2A36),
                   width: 1.4,
                 ),
               ),

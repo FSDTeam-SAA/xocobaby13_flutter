@@ -24,9 +24,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = VerifyEmailController(
-      SnackbarNotifier(context: context),
-    );
+    _controller = VerifyEmailController(SnackbarNotifier(context: context));
     _controller.email = widget.email;
     _controller.processStatusNotifier.addListener(_onStatusChanged);
     _controller.addListener(_onStatusChanged);
@@ -69,8 +67,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading =
-        _controller.processStatusNotifier.status is LoadingStatus;
+    final isLoading = _controller.processStatusNotifier.status is LoadingStatus;
     final canSubmit = _otp.trim().length == 6 && !isLoading;
     final PinTheme pinTheme = PinTheme(
       width: 50,

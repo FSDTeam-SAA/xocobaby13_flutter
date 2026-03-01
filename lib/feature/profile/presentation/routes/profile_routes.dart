@@ -51,14 +51,15 @@ class ProfileRoutes {
           barrierColor: Colors.black45,
           transitionDuration: const Duration(milliseconds: 160),
           child: const FishermanLogoutScreen(),
-          transitionsBuilder: (
-            BuildContext context,
-            Animation<double> animation,
-            Animation<double> secondaryAnimation,
-            Widget child,
-          ) {
-            return FadeTransition(opacity: animation, child: child);
-          },
+          transitionsBuilder:
+              (
+                BuildContext context,
+                Animation<double> animation,
+                Animation<double> secondaryAnimation,
+                Widget child,
+              ) {
+                return FadeTransition(opacity: animation, child: child);
+              },
         );
       },
     ),

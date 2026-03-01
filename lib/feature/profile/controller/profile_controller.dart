@@ -27,8 +27,7 @@ class ProfileController extends GetxController {
     avatarBytes: null,
   ).obs;
 
-  final RxList<ActivityItemModel> _activityItems =
-      <ActivityItemModel>[].obs;
+  final RxList<ActivityItemModel> _activityItems = <ActivityItemModel>[].obs;
 
   void setActivityStatus(ActivityStatusModel status) {
     selectedActivityStatus.value = status;
@@ -122,7 +121,9 @@ class ProfileController extends GetxController {
     if (data is List) {
       for (final item in data) {
         if (item is Map) {
-          items.add(_mapBookingToActivity(Map<String, dynamic>.from(item), uiStatus));
+          items.add(
+            _mapBookingToActivity(Map<String, dynamic>.from(item), uiStatus),
+          );
         }
       }
     }
@@ -142,14 +143,13 @@ class ProfileController extends GetxController {
     final Map<String, dynamic> slot = booking['slot'] is Map
         ? Map<String, dynamic>.from(booking['slot'])
         : <String, dynamic>{};
-    final String title =
-        spot['title']?.toString().trim().isNotEmpty == true
-            ? spot['title'].toString()
-            : 'Spot Booking';
+    final String title = spot['title']?.toString().trim().isNotEmpty == true
+        ? spot['title'].toString()
+        : 'Spot Booking';
     final String ownerName =
         owner['fullName']?.toString().trim().isNotEmpty == true
-            ? owner['fullName'].toString()
-            : 'Spot Owner';
+        ? owner['fullName'].toString()
+        : 'Spot Owner';
     final String imagePath = _pickImageUrl(spot['images']);
     final String dateLabel = _formatDate(booking['date']?.toString());
     final String timeRange = _formatTimeRange(slot);
@@ -311,9 +311,7 @@ class ProfileController extends GetxController {
         ? Map<String, dynamic>.from(responseData)
         : <String, dynamic>{};
     final payload = responseBody['data'];
-    return payload is Map
-        ? Map<String, dynamic>.from(payload)
-        : responseBody;
+    return payload is Map ? Map<String, dynamic>.from(payload) : responseBody;
   }
 
   void _applyProfileData(Map<String, dynamic> data) {

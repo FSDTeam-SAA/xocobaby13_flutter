@@ -10,6 +10,7 @@ import 'package:xocobaby13/feature/auth/presentation/widgets/bob_logo_badge.dart
 import 'package:xocobaby13/feature/auth/controller/login_controller.dart';
 import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
 import 'package:xocobaby13/core/notifiers/button_status_notifier.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -63,11 +64,13 @@ class _LoginScreenState extends State<LoginScreen> {
       },
     );
     if (didLogin && mounted) {
-      final authRecord =
-          await Get.find<AuthorizedPigeon>().getCurrentAuthRecord();
+      final authRecord = await Get.find<AuthorizedPigeon>()
+          .getCurrentAuthRecord();
       final rawRole = (authRecord?.data['role'] ?? '').toString().trim();
-      final normalizedRole =
-          rawRole.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+      final normalizedRole = rawRole.toLowerCase().replaceAll(
+        RegExp(r'[^a-z]'),
+        '',
+      );
       NavigationController.instance().setTabIndex(0);
       if (normalizedRole == 'spotowner') {
         context.go(NavigationRouteNames.spotOwnerMain);
@@ -138,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
             controller: _passwordController,
             obscureText: _obscurePassword,
             onChanged: (value) => _loginController.password = value,
-            suffixIcon: IconButton(
+            suffixIcon: AppIconButton(
               onPressed: () {
                 setState(() => _obscurePassword = !_obscurePassword);
               },

@@ -14,6 +14,7 @@ import 'package:xocobaby13/feature/chat/presentation/widgets/chat_bubble.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_dialogs.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_input_bar.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_style.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 enum _ChatMenuAction { report, block }
 
@@ -434,11 +435,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
           actions: <Widget>[
-            TextButton(
+            AppTextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Cancel'),
             ),
-            TextButton(
+            AppTextButton(
               onPressed: () =>
                   Navigator.of(dialogContext).pop(controller.text.trim()),
               child: const Text('Save'),
@@ -766,7 +767,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
               child: Row(
                 children: <Widget>[
-                  IconButton(
+                  AppIconButton(
                     onPressed: () => Navigator.of(context).maybePop(),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -924,6 +925,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   .map((XFile file) => file.path)
                   .toList(),
               onRemoveAttachment: _removePendingImage,
+              isSending: _isSending,
             ),
           ],
         ),

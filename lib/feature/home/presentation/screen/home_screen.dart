@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
 import 'package:xocobaby13/feature/search/presentation/routes/search_routes.dart';
+import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -508,7 +509,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          TextButton(
+                          AppTextButton(
                             onPressed: _loadLiveBookings,
                             child: const Text('Retry'),
                           ),
@@ -585,7 +586,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          TextButton(
+                          AppTextButton(
                             onPressed: _loadNearbySpots,
                             child: const Text('Retry'),
                           ),
@@ -655,7 +656,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    TextButton(
+                    AppTextButton(
                       onPressed: _loadRecommendedSpots,
                       child: const Text('Retry'),
                     ),
@@ -1324,7 +1325,7 @@ class _PopularCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   height: 34,
-                  child: ElevatedButton(
+                  child: AppElevatedButton(
                     onPressed: onViewDetails,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1787CF),
