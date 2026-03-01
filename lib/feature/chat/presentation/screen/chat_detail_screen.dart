@@ -36,6 +36,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String _otherUserId = '';
   bool _isBlocked = false;
   bool _isSending = false;
+  String _currentUserAvatarUrl = '';
   bool _socketInitialized = false;
   StreamSubscription<dynamic>? _newMessageSub;
   StreamSubscription<dynamic>? _updateMessageSub;
@@ -300,6 +301,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           : <String, dynamic>{};
       final data = responseBody['data'];
       if (data is Map) {
+        final String avatarUrl = data['avatar'] is Map
+            ? data['avatar']['url']?.toString() ?? ''
+            : '';
         final blockedUsers = data['blockedUsers'];
         if (blockedUsers is List) {
           final bool isBlocked = blockedUsers.any(
@@ -308,6 +312,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           if (mounted) {
             setState(() => _isBlocked = isBlocked);
           }
+        }
+        if (mounted && avatarUrl.isNotEmpty) {
+          setState(() => _currentUserAvatarUrl = avatarUrl);
         }
       }
     } catch (_) {
@@ -641,6 +648,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               color: ChatPalette.statusDot,
               shape: BoxShape.circle,
             ),
+          ),
+          const SizedBox(width: 6),
+          CircleAvatar(
+            radius: 8,
+            backgroundColor: ChatPalette.actionBlue,
+            backgroundImage: _currentUserAvatarUrl.isNotEmpty
+                ? NetworkImage(_currentUserAvatarUrl)
+                : null,
+            child: _currentUserAvatarUrl.isEmpty
+                ? const Text(
+                    'ME',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 6,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  )
+                : null,
           ),
         ],
       );
