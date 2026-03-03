@@ -124,6 +124,8 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       if (!mounted) return;
       if (paid == true) {
         setState(() => _isBooked = true);
+        await _showBookingSuccessDialog();
+        if (!mounted) return;
         context.go(NavigationRouteNames.main);
       }
     } on DioException catch (e) {
@@ -169,8 +171,10 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Booking Successful'),
-          content: const Text('Your booking has been completed successfully.'),
+          title: const Text('Payment Successful'),
+          content: const Text(
+            'Your booking is confirmed. Enjoy your fishing trip!',
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
