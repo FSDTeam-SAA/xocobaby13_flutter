@@ -179,6 +179,8 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         );
       },
     );
+  }
+
   Future<void> _startChat() async {
     if (_isCreatingChat) return;
     final String ownerId = _readString(_spot?['owner']?['_id']);

@@ -55,13 +55,17 @@ final class AuthInterfaceImpl extends AuthInterface {
 
         final accessToken = pickFirstString([
           payload['accessToken'],
+          payload['access_token'],
           payload['token'],
           responseBody['accessToken'],
+          responseBody['access_token'],
           responseBody['token'],
         ]);
         var refreshToken = pickFirstString([
           payload['refreshToken'],
+          payload['refresh_token'],
           responseBody['refreshToken'],
+          responseBody['refresh_token'],
         ]);
         if (refreshToken.isEmpty) {
           refreshToken = accessToken;
@@ -169,13 +173,17 @@ final class AuthInterfaceImpl extends AuthInterface {
 
       final accessToken = pickFirstString([
         payload['accessToken'],
+        payload['access_token'],
         payload['token'],
         responseBody['accessToken'],
+        responseBody['access_token'],
         responseBody['token'],
       ]);
       var refreshToken = pickFirstString([
         payload['refreshToken'],
+        payload['refresh_token'],
         responseBody['refreshToken'],
+        responseBody['refresh_token'],
       ]);
       if (refreshToken.isEmpty) {
         refreshToken = accessToken;
