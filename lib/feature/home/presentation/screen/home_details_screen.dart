@@ -11,6 +11,7 @@ import 'package:xocobaby13/feature/chat/model/chat_api_mapper.dart';
 import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
 import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
+import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class HomeDetailsScreen extends StatefulWidget {
@@ -123,7 +124,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       if (!mounted) return;
       if (paid == true) {
         setState(() => _isBooked = true);
-        await _showBookingSuccessDialog();
+        context.go(NavigationRouteNames.main);
       }
     } on DioException catch (e) {
       final dynamic responseData = e.response?.data;

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
@@ -28,31 +29,46 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return '\$${amount.toStringAsFixed(2)}';
   }
 
-  String _extractSessionId(Map<String, dynamic> responseBody) {
+  String _extractCheckoutUrl(Map<String, dynamic> responseBody) {
     String valueToText(dynamic value) => value?.toString().trim() ?? '';
 
+    bool isValidHttpUrl(String value) {
+      final Uri? uri = Uri.tryParse(value);
+      if (uri == null) return false;
+      final String scheme = uri.scheme.toLowerCase();
+      return scheme == 'http' || scheme == 'https';
+    }
+
     final List<dynamic> candidates = <dynamic>[
-      responseBody['sessionId'],
-      responseBody['id'],
-      responseBody['checkoutSessionId'],
+      responseBody['checkoutUrl'],
+      responseBody['checkout_url'],
+      responseBody['url'],
     ];
+
     final dynamic data = responseBody['data'];
     if (data is Map) {
       candidates.addAll(<dynamic>[
-        data['sessionId'],
-        data['id'],
-        data['checkoutSessionId'],
+        data['checkoutUrl'],
+        data['checkout_url'],
+        data['url'],
       ]);
-      final dynamic session = data['session'];
-      if (session is Map) {
-        candidates.add(session['id']);
-        candidates.add(session['sessionId']);
+
+      final dynamic payment = data['payment'];
+      if (payment is Map) {
+        final dynamic gatewayResponse = payment['gatewayResponse'];
+        if (gatewayResponse is Map) {
+          candidates.addAll(<dynamic>[
+            gatewayResponse['checkoutUrl'],
+            gatewayResponse['checkout_url'],
+            gatewayResponse['url'],
+          ]);
+        }
       }
     }
 
     for (final dynamic candidate in candidates) {
       final String value = valueToText(candidate);
-      if (value.isNotEmpty) return value;
+      if (value.isNotEmpty && isValidHttpUrl(value)) return value;
     }
     return '';
   }
@@ -93,23 +109,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  Future<dynamic> _confirmPaymentRequest(String sessionId) async {
-    final AuthorizedPigeon pigeon = Get.find<AuthorizedPigeon>();
-    final Map<String, dynamic> payload = <String, dynamic>{
-      'bookingId': widget.bookingId,
-      'sessionId': sessionId,
-    };
-    try {
-      return await pigeon.post(ApiEndpoints.paymentConfirm, data: payload);
-    } on DioException catch (e) {
-      final int statusCode = e.response?.statusCode ?? 0;
-      if (statusCode == 404 || statusCode == 405) {
-        return pigeon.post(ApiEndpoints.paymentConfirmLegacy, data: payload);
-      }
-      rethrow;
-    }
-  }
-
   Future<void> _payNow() async {
     if (_isPaying) return;
     if (widget.bookingId.trim().isEmpty) {
@@ -134,33 +133,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      final String sessionId = _extractSessionId(createBody);
-      if (sessionId.isEmpty) {
+      final String checkoutUrl = _extractCheckoutUrl(createBody);
+      if (checkoutUrl.isEmpty) {
         if (!mounted) return;
-        _showMessage('Payment session id is missing');
-        return;
-      }
-
-      final confirmResponse = await _confirmPaymentRequest(sessionId);
-      final Map<String, dynamic> confirmBody = confirmResponse.data is Map
-          ? Map<String, dynamic>.from(confirmResponse.data as Map)
-          : <String, dynamic>{};
-      final bool confirmSuccess = confirmBody['success'] == null
-          ? (confirmResponse.statusCode ?? 500) < 300
-          : confirmBody['success'] == true;
-      if (!confirmSuccess) {
-        if (!mounted) return;
-        _showMessage(
-          _responseMessage(
-            confirmBody,
-            fallback: 'Payment confirmation failed',
-          ),
-        );
+        _showMessage('Payment URL is missing');
         return;
       }
 
       if (!mounted) return;
-      context.pop(true);
+      final bool? paid = await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
+          builder: (_) => _CheckoutWebViewScreen(checkoutUrl: checkoutUrl),
+        ),
+      );
+
+      if (!mounted) return;
+      if (paid == true) {
+        context.pop(true);
+      }
     } on DioException catch (e) {
       if (!mounted) return;
       _showMessage(
@@ -261,7 +251,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Tap pay to create and confirm your payment session.',
+                      'Tap pay to open Stripe checkout.',
                       style: TextStyle(
                         fontSize: 10,
                         color: Color(0xFF6A7B8C),
@@ -360,6 +350,154 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CheckoutWebViewScreen extends StatefulWidget {
+  final String checkoutUrl;
+
+  const _CheckoutWebViewScreen({required this.checkoutUrl});
+
+  @override
+  State<_CheckoutWebViewScreen> createState() => _CheckoutWebViewScreenState();
+}
+
+class _CheckoutWebViewScreenState extends State<_CheckoutWebViewScreen> {
+  late final WebViewController _controller;
+  bool _isLoading = true;
+  bool _isHandled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (_) {
+            if (mounted) setState(() => _isLoading = true);
+          },
+          onPageFinished: (String url) {
+            _completeFromUrl(url);
+            if (mounted) setState(() => _isLoading = false);
+          },
+          onNavigationRequest: (NavigationRequest request) {
+            if (_isSuccessUrl(request.url)) {
+              _finish(true);
+              return NavigationDecision.prevent;
+            }
+            if (_isCancelOrFailUrl(request.url)) {
+              _finish(false);
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(widget.checkoutUrl));
+  }
+
+  void _completeFromUrl(String url) {
+    if (_isSuccessUrl(url)) {
+      _finish(true);
+      return;
+    }
+    if (_isCancelOrFailUrl(url)) {
+      _finish(false);
+    }
+  }
+
+  bool _isSuccessUrl(String url) {
+    final Uri? uri = Uri.tryParse(url);
+    if (uri == null) return false;
+    final String full = url.toLowerCase();
+    final String path = uri.path.toLowerCase();
+    final String status = (uri.queryParameters['status'] ?? '')
+        .toLowerCase()
+        .trim();
+    final String redirectStatus = (uri.queryParameters['redirect_status'] ?? '')
+        .toLowerCase()
+        .trim();
+    final String paymentStatus = (uri.queryParameters['payment_status'] ?? '')
+        .toLowerCase()
+        .trim();
+    final String sessionStatus = (uri.queryParameters['session_status'] ?? '')
+        .toLowerCase()
+        .trim();
+
+    if (redirectStatus == 'succeeded') return true;
+    if (paymentStatus == 'paid') return true;
+    if (sessionStatus == 'complete') return true;
+    if (status == 'success' ||
+        status == 'succeeded' ||
+        status == 'paid' ||
+        status == 'complete') {
+      return true;
+    }
+    if (path.contains('/payment/success') ||
+        path.endsWith('/success') ||
+        path.contains('/payment-success') ||
+        full.contains('payment_success')) {
+      return true;
+    }
+    return false;
+  }
+
+  bool _isCancelOrFailUrl(String url) {
+    final Uri? uri = Uri.tryParse(url);
+    if (uri == null) return false;
+    final String full = url.toLowerCase();
+    final String path = uri.path.toLowerCase();
+    final String status = (uri.queryParameters['status'] ?? '')
+        .toLowerCase()
+        .trim();
+    final String redirectStatus = (uri.queryParameters['redirect_status'] ?? '')
+        .toLowerCase()
+        .trim();
+    final String paymentStatus = (uri.queryParameters['payment_status'] ?? '')
+        .toLowerCase()
+        .trim();
+
+    if (redirectStatus == 'failed') return true;
+    if (paymentStatus == 'failed' || paymentStatus == 'canceled') return true;
+    if (status == 'failed' || status == 'cancel' || status == 'canceled') {
+      return true;
+    }
+    if (path.contains('/cancel') ||
+        path.contains('/canceled') ||
+        full.contains('payment_cancel') ||
+        path.contains('/failed')) {
+      return true;
+    }
+    return false;
+  }
+
+  void _finish(bool paid) {
+    if (_isHandled || !mounted) return;
+    _isHandled = true;
+    Navigator.of(context).pop(paid);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Stripe Checkout',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1D2A36),
+        elevation: 0,
+      ),
+      body: Stack(
+        children: <Widget>[
+          WebViewWidget(controller: _controller),
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ],
       ),
     );
   }
