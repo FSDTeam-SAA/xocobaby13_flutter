@@ -11,6 +11,7 @@ import 'package:xocobaby13/feature/chat/model/chat_api_mapper.dart';
 import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
 import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
+import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
 class HomeDetailsScreen extends StatefulWidget {
@@ -124,6 +125,8 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       if (paid == true) {
         setState(() => _isBooked = true);
         await _showBookingSuccessDialog();
+        if (!mounted) return;
+        context.go(NavigationRouteNames.main);
       }
     } on DioException catch (e) {
       final dynamic responseData = e.response?.data;
@@ -168,8 +171,10 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Booking Successful'),
-          content: const Text('Your booking has been completed successfully.'),
+          title: const Text('Payment Successful'),
+          content: const Text(
+            'Your booking is confirmed. Enjoy your fishing trip!',
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),

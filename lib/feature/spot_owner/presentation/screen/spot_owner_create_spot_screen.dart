@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:app_pigeon/app_pigeon.dart';
 import 'package:dio/dio.dart' hide FormData, MultipartFile;
 import 'package:flutter/cupertino.dart';
@@ -143,7 +145,26 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
   Future<void> _pickImages() async {
     final List<XFile> picked = await ImagePicker().pickMultiImage();
     if (picked.isEmpty) return;
-    setState(() => _selectedImages = picked);
+    setState(() {
+      final Set<String> existingPaths = _selectedImages
+          .map((XFile file) => file.path)
+          .toSet();
+      for (final XFile file in picked) {
+        if (!existingPaths.contains(file.path)) {
+          _selectedImages.add(file);
+        }
+      }
+    });
+  }
+
+  void _removeImageAt(int index) {
+    if (index < 0 || index >= _selectedImages.length) return;
+    setState(() => _selectedImages.removeAt(index));
+  }
+
+  void _clearSelectedImages() {
+    if (_selectedImages.isEmpty) return;
+    setState(() => _selectedImages = <XFile>[]);
   }
 
   Future<void> _submitSpot() async {
@@ -590,7 +611,7 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
                 GestureDetector(
                   onTap: _pickImages,
                   child: Container(
-                    height: 90,
+                    height: 96,
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -607,22 +628,147 @@ class _SpotOwnerCreateSpotScreenState extends State<SpotOwnerCreateSpotScreen> {
                         const SizedBox(height: 6),
                         Text(
                           _selectedImages.isEmpty
-                              ? 'Upload'
-                              : 'Upload (${_selectedImages.length} selected)',
+                              ? 'Upload Images'
+                              : 'Add More (${_selectedImages.length} selected)',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF1D2A36),
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Tap to pick from gallery',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF6A7B8C),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
+                if (_selectedImages.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: <Widget>[
+                      Text(
+                        'Selected Images (${_selectedImages.length})',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1D2A36),
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: _clearSelectedImages,
+                        child: const Text(
+                          'Remove All',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFE23A3A),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: List<Widget>.generate(_selectedImages.length, (
+                      int index,
+                    ) {
+                      return _SelectedImageTile(
+                        file: _selectedImages[index],
+                        onRemove: () => _removeImageAt(index),
+                      );
+                    }),
+                  ),
+                ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SelectedImageTile extends StatelessWidget {
+  final XFile file;
+  final VoidCallback onRemove;
+
+  const _SelectedImageTile({required this.file, required this.onRemove});
+
+  String get _fileName {
+    final String normalized = file.name.trim();
+    if (normalized.isNotEmpty) return normalized;
+    final List<String> parts = file.path.split('/');
+    return parts.isNotEmpty ? parts.last : 'image';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 102,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Stack(
+            children: <Widget>[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.file(
+                  File(file.path),
+                  width: 102,
+                  height: 88,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    width: 102,
+                    height: 88,
+                    color: const Color(0xFFE2E8F1),
+                    child: const Icon(Icons.photo, size: 24),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 5,
+                right: 5,
+                child: GestureDetector(
+                  onTap: onRemove,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: const Color(0xCC1D2A36),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.clear_thick,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _fileName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF3A4A5A),
+            ),
+          ),
+        ],
       ),
     );
   }
