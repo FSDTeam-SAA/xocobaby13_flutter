@@ -543,6 +543,7 @@ class _CheckoutWebViewScreenState extends State<_CheckoutWebViewScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
   bool _isHandled = false;
+  bool _resultScheduled = false;
 
   @override
   void initState() {
@@ -650,9 +651,13 @@ class _CheckoutWebViewScreenState extends State<_CheckoutWebViewScreen> {
   }
 
   void _finish(bool paid) {
-    if (_isHandled || !mounted) return;
+    if (_isHandled || _resultScheduled || !mounted) return;
+    _resultScheduled = true;
     _isHandled = true;
-    Navigator.of(context).pop(paid);
+    Future<void>.delayed(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      Navigator.of(context).pop(paid);
+    });
   }
 
   @override
