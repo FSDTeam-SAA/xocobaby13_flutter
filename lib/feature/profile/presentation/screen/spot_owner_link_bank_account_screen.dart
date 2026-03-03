@@ -21,7 +21,6 @@ class SpotOwnerLinkBankAccountScreen extends StatefulWidget {
 class _SpotOwnerLinkBankAccountScreenState
     extends State<SpotOwnerLinkBankAccountScreen> {
   final TextEditingController _accountController = TextEditingController();
-  final TextEditingController _routingController = TextEditingController();
   bool _showAccountNumber = false;
 
   @override
@@ -36,17 +35,15 @@ class _SpotOwnerLinkBankAccountScreenState
   @override
   void dispose() {
     _accountController.dispose();
-    _routingController.dispose();
     super.dispose();
   }
 
   void _submit() {
     final String accountNumber = _accountController.text.trim();
-    final String routingNumber = _routingController.text.trim();
-    if (accountNumber.isEmpty || routingNumber.isEmpty) {
+    if (accountNumber.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please fill account and routing number'),
+          content: Text('Please fill account number'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -88,13 +85,6 @@ class _SpotOwnerLinkBankAccountScreenState
                         size: 20,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  SpotOwnerProfileTextField(
-                    label: 'Routing Number',
-                    controller: _routingController,
-                    hint: '••• •• ••••',
-                    keyboardType: TextInputType.number,
                   ),
                 ],
               ),

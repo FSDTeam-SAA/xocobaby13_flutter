@@ -27,57 +27,39 @@ class _SpotOwnerStripeConnectScreenState
     if (_isConnecting) return;
     setState(() => _isConnecting = true);
     try {
-      final response = await Get.find<AuthorizedPigeon>().post(
-        ApiEndpoints.paymentOnboard,
+      final _StripeOnboardState? initialState = await _fetchOnboardState(
+        showErrorMessage: true,
       );
-      final Map<String, dynamic> responseBody = response.data is Map
-          ? Map<String, dynamic>.from(response.data as Map)
-          : <String, dynamic>{};
-      final bool success = responseBody['success'] == true;
-      final String message =
-          responseBody['message']?.toString() ??
-          'Unable to start Stripe onboarding';
-      if (!success) {
-        if (!mounted) return;
-        _showMessage(message);
+      if (!mounted || initialState == null) return;
+      if (initialState.onboarded) {
+        _openBankAccountScreen(initialState.accountId);
         return;
       }
-      final Map<String, dynamic> data = responseBody['data'] is Map
-          ? Map<String, dynamic>.from(responseBody['data'] as Map)
-          : <String, dynamic>{};
-      final bool onboarded = data['onboarded'] == true;
-      final String onboardingUrl = data['onboardingUrl']?.toString() ?? '';
-      final String accountId = data['accountId']?.toString() ?? '';
-      final int? expiresAt = data['expiresAt'] is int
-          ? data['expiresAt'] as int
-          : int.tryParse(data['expiresAt']?.toString() ?? '');
-
-      if (!mounted) return;
-      setState(() {
-        _accountId = accountId;
-        _onboarded = onboarded;
-        _expiresAt = expiresAt;
-        _statusMessage = message;
-      });
-      if (onboarded) {
-        _openBankAccountScreen(accountId);
-        return;
-      }
-      if (onboardingUrl.trim().isEmpty) {
+      if (initialState.onboardingUrl.trim().isEmpty) {
         _showMessage('Onboarding URL is missing');
         return;
       }
 
-      final bool? connected = await Navigator.of(context).push<bool>(
+      await Navigator.of(context).push<bool>(
         MaterialPageRoute<bool>(
           builder: (_) => SpotOwnerStripeOnboardingWebViewScreen(
-            onboardingUrl: onboardingUrl,
+            onboardingUrl: initialState.onboardingUrl,
           ),
         ),
       );
+
       if (!mounted) return;
-      if (connected == true) {
-        _openBankAccountScreen(accountId);
+      final _StripeOnboardState? latestState = await _fetchOnboardState(
+        showErrorMessage: false,
+      );
+      if (!mounted || latestState == null) return;
+      if (latestState.onboarded) {
+        _showMessage('Stripe account connected successfully');
+        _openBankAccountScreen(latestState.accountId);
+      } else {
+        _showMessage(
+          'Stripe account is not fully set up yet. Please complete Stripe onboarding.',
+        );
       }
     } on DioException catch (e) {
       final dynamic errorData = e.response?.data;
@@ -94,6 +76,88 @@ class _SpotOwnerStripeConnectScreenState
         setState(() => _isConnecting = false);
       }
     }
+  }
+
+  Future<_StripeOnboardState?> _fetchOnboardState({
+    required bool showErrorMessage,
+  }) async {
+    final response = await Get.find<AuthorizedPigeon>().post(
+      ApiEndpoints.paymentOnboard,
+    );
+    final Map<String, dynamic> responseBody = response.data is Map
+        ? Map<String, dynamic>.from(response.data as Map)
+        : <String, dynamic>{};
+    final bool success = _asBool(responseBody['success']);
+    final String message =
+        responseBody['message']?.toString().trim().isNotEmpty == true
+        ? responseBody['message'].toString().trim()
+        : 'Unable to load Stripe onboarding status';
+    if (!success) {
+      if (mounted && showErrorMessage) _showMessage(message);
+      return null;
+    }
+
+    final Map<String, dynamic> data = responseBody['data'] is Map
+        ? Map<String, dynamic>.from(responseBody['data'] as Map)
+        : <String, dynamic>{};
+    final _StripeOnboardState state = _StripeOnboardState(
+      accountId: (data['accountId'] ?? '').toString().trim(),
+      onboardingUrl: (data['onboardingUrl'] ?? '').toString().trim(),
+      onboarded: _extractOnboarded(data),
+      expiresAt: data['expiresAt'] is int
+          ? data['expiresAt'] as int
+          : int.tryParse(data['expiresAt']?.toString() ?? ''),
+      message: message,
+    );
+
+    if (mounted) {
+      setState(() {
+        _accountId = state.accountId;
+        _onboarded = state.onboarded;
+        _expiresAt = state.expiresAt;
+        _statusMessage = state.message;
+      });
+    }
+    return state;
+  }
+
+  bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    final String text = value?.toString().trim().toLowerCase() ?? '';
+    return text == '1' || text == 'true' || text == 'yes';
+  }
+
+  bool _extractOnboarded(Map<String, dynamic> data) {
+    final bool detailsSubmitted =
+        _asBool(data['detailsSubmitted']) || _asBool(data['details_submitted']);
+    final bool chargesEnabled =
+        _asBool(data['chargesEnabled']) || _asBool(data['charges_enabled']);
+    final bool payoutsEnabled =
+        _asBool(data['payoutsEnabled']) || _asBool(data['payouts_enabled']);
+    final bool hasCompletionSignals =
+        data.containsKey('detailsSubmitted') ||
+        data.containsKey('details_submitted') ||
+        data.containsKey('chargesEnabled') ||
+        data.containsKey('charges_enabled') ||
+        data.containsKey('payoutsEnabled') ||
+        data.containsKey('payouts_enabled');
+
+    if (data['requirementsCurrentlyDue'] is List &&
+        (data['requirementsCurrentlyDue'] as List).isNotEmpty) {
+      return false;
+    }
+
+    if (hasCompletionSignals && !(detailsSubmitted && chargesEnabled && payoutsEnabled)) {
+      return false;
+    }
+
+    if (data.containsKey('onboarded')) return _asBool(data['onboarded']);
+    if (data.containsKey('isOnboarded')) return _asBool(data['isOnboarded']);
+    if (data.containsKey('isConnected')) return _asBool(data['isConnected']);
+    if (data.containsKey('connected')) return _asBool(data['connected']);
+    if (data.containsKey('isComplete')) return _asBool(data['isComplete']);
+
+    return detailsSubmitted && chargesEnabled && payoutsEnabled;
   }
 
   void _openBankAccountScreen(String accountId) {
@@ -534,9 +598,6 @@ class _SpotOwnerStripeOnboardingWebViewScreenState
     final String scheme = uri.scheme.toLowerCase();
     if (scheme != 'http' && scheme != 'https') return true;
 
-    final String path = uri.path.toLowerCase();
-    if (path.contains('/spot-owner/profile/link-bank-account')) return true;
-
     final String statusValue =
         uri.queryParameters['status']?.toLowerCase() ?? '';
     final bool querySaysSuccess =
@@ -594,4 +655,20 @@ class _SpotOwnerStripeOnboardingWebViewScreenState
       ),
     );
   }
+}
+
+class _StripeOnboardState {
+  const _StripeOnboardState({
+    required this.accountId,
+    required this.onboardingUrl,
+    required this.onboarded,
+    required this.expiresAt,
+    required this.message,
+  });
+
+  final String accountId;
+  final String onboardingUrl;
+  final bool onboarded;
+  final int? expiresAt;
+  final String message;
 }
