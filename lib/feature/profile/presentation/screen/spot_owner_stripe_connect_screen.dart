@@ -1,10 +1,8 @@
 import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
-import 'package:xocobaby13/feature/profile/presentation/routes/spot_owner_profile_routes.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_style.dart';
 
 class SpotOwnerStripeConnectScreen extends StatefulWidget {
@@ -32,7 +30,7 @@ class _SpotOwnerStripeConnectScreenState
       );
       if (!mounted || initialState == null) return;
       if (initialState.onboarded) {
-        _openBankAccountScreen(initialState.accountId);
+        await _showConnectedDialog();
         return;
       }
       if (initialState.onboardingUrl.trim().isEmpty) {
@@ -54,8 +52,7 @@ class _SpotOwnerStripeConnectScreenState
       );
       if (!mounted || latestState == null) return;
       if (latestState.onboarded) {
-        _showMessage('Stripe account connected successfully');
-        _openBankAccountScreen(latestState.accountId);
+        await _showConnectedDialog();
       } else {
         _showMessage(
           'Stripe account is not fully set up yet. Please complete Stripe onboarding.',
@@ -147,7 +144,8 @@ class _SpotOwnerStripeConnectScreenState
       return false;
     }
 
-    if (hasCompletionSignals && !(detailsSubmitted && chargesEnabled && payoutsEnabled)) {
+    if (hasCompletionSignals &&
+        !(detailsSubmitted && chargesEnabled && payoutsEnabled)) {
       return false;
     }
 
@@ -160,12 +158,23 @@ class _SpotOwnerStripeConnectScreenState
     return detailsSubmitted && chargesEnabled && payoutsEnabled;
   }
 
-  void _openBankAccountScreen(String accountId) {
-    final String cleanAccountId = accountId.trim();
-    final String targetPath = cleanAccountId.isEmpty
-        ? SpotOwnerProfileRouteNames.linkBankAccountForm
-        : '${SpotOwnerProfileRouteNames.linkBankAccountForm}?accountNumber=${Uri.encodeComponent(cleanAccountId)}';
-    context.pushReplacement(targetPath);
+  Future<void> _showConnectedDialog() {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Success'),
+          content: const Text('Stripe account connected successfully.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showMessage(String message) {
@@ -595,8 +604,9 @@ class _SpotOwnerStripeOnboardingWebViewScreenState
   bool _isSuccessRedirectUrl(String url) {
     final Uri? uri = Uri.tryParse(url);
     if (uri == null) return false;
-    final String scheme = uri.scheme.toLowerCase();
-    if (scheme != 'http' && scheme != 'https') return true;
+
+    if (_isStripeConnectPath(uri, 'refresh')) return false;
+    if (_isStripeConnectPath(uri, 'return')) return true;
 
     final String statusValue =
         uri.queryParameters['status']?.toLowerCase() ?? '';
@@ -605,7 +615,29 @@ class _SpotOwnerStripeOnboardingWebViewScreenState
         _isTruthy(uri.queryParameters['onboarded']) ||
         _isTruthy(uri.queryParameters['connected']) ||
         statusValue == 'success';
-    return querySaysSuccess;
+
+    final String scheme = uri.scheme.toLowerCase();
+    if (scheme == 'http' || scheme == 'https') {
+      return querySaysSuccess;
+    }
+
+    // Avoid auto-closing for arbitrary custom-scheme navigations.
+    return querySaysSuccess && _looksLikeStripeReturn(uri);
+  }
+
+  bool _isStripeConnectPath(Uri uri, String suffix) {
+    final String path = uri.path.toLowerCase().replaceAll(RegExp(r'/+$'), '');
+    final String normalizedSuffix = suffix.toLowerCase();
+    return path.endsWith('/payments/connect/$normalizedSuffix') ||
+        path.endsWith('/connect/$normalizedSuffix') ||
+        path.contains('/stripe/connect/$normalizedSuffix');
+  }
+
+  bool _looksLikeStripeReturn(Uri uri) {
+    final String combined =
+        '${uri.host.toLowerCase()}${uri.path.toLowerCase()}';
+    return combined.contains('return') &&
+        (combined.contains('connect') || combined.contains('stripe'));
   }
 
   bool _isTruthy(String? value) {
