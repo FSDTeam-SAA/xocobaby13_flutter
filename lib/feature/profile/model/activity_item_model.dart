@@ -12,6 +12,9 @@ class ActivityItemModel {
   final int reviewsCount;
   final int pricePerDay;
   final String? spotId;
+  final String? bookingId;
+  final String? paymentId;
+  final String bookingStatus;
 
   const ActivityItemModel({
     required this.title,
@@ -25,5 +28,8 @@ class ActivityItemModel {
     required this.reviewsCount,
     required this.pricePerDay,
     this.spotId,
+    this.bookingId,
+    this.paymentId,
+    this.bookingStatus = '',
   });
 }

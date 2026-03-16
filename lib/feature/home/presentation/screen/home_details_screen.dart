@@ -21,6 +21,12 @@ class HomeDetailsScreen extends StatefulWidget {
   final double? lng;
   final double? distanceKm;
   final String? spotId;
+  final String? bookingId;
+  final String? paymentId;
+  final String? bookingDateLabel;
+  final String? bookingTimeRange;
+  final String? bookingStatus;
+  final int? bookingPrice;
 
   const HomeDetailsScreen({
     super.key,
@@ -30,6 +36,12 @@ class HomeDetailsScreen extends StatefulWidget {
     this.lng,
     this.distanceKm,
     this.spotId,
+    this.bookingId,
+    this.paymentId,
+    this.bookingDateLabel,
+    this.bookingTimeRange,
+    this.bookingStatus,
+    this.bookingPrice,
   });
 
   @override
@@ -38,6 +50,11 @@ class HomeDetailsScreen extends StatefulWidget {
 
 class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
   late bool _isBooked;
+  String? _bookingId;
+  String? _paymentId;
+  String? _bookingDateLabel;
+  String? _bookingTimeRange;
+  int? _bookingPrice;
   bool _isLoadingSpot = false;
   String? _spotError;
   Map<String, dynamic>? _spot;
@@ -79,7 +96,13 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
   void initState() {
     super.initState();
     _isBooked = widget.isBooked;
+    _bookingId = widget.bookingId;
+    _paymentId = widget.paymentId;
+    _bookingDateLabel = widget.bookingDateLabel;
+    _bookingTimeRange = widget.bookingTimeRange;
+    _bookingPrice = widget.bookingPrice;
     _loadSpot();
+    _loadExistingBooking();
   }
 
   String _formatBookingDate(DateTime value) {
@@ -196,6 +219,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
     setState(() => _isCreatingChat = true);
     try {
       final String currentUserId = await _resolveCurrentUserId();
+      if (!mounted) {
+        return;
+      }
       if (currentUserId.isNotEmpty && currentUserId == ownerId) {
         _showMessage(context, "You can't chat with yourself");
         return;
@@ -264,6 +290,75 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
     }
   }
 
+  Future<void> _loadExistingBooking() async {
+    final String spotId = _readString(widget.spotId);
+    if (spotId.isEmpty) {
+      return;
+    }
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.getMyBookings,
+        queryParameters: const <String, dynamic>{'limit': 100},
+      );
+      final Map<String, dynamic> responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final dynamic data = responseBody['data'];
+      if (data is! List) {
+        return;
+      }
+
+      Map<String, dynamic>? matchedBooking;
+      for (final dynamic item in data) {
+        if (item is! Map) {
+          continue;
+        }
+        final Map<String, dynamic> booking = Map<String, dynamic>.from(item);
+        final String bookingSpotId = _readString(
+          booking['spot'] is Map ? booking['spot']['_id'] : null,
+        );
+        final String status = _readString(booking['status']);
+        final String paymentId = _readObjectId(booking['paymentId']) ?? '';
+        final String paymentStatus = _readString(booking['paymentStatus']);
+        final bool isRefunded = paymentStatus.toLowerCase() == 'refunded';
+        final bool isCanceled = status.toLowerCase() == 'cancelled';
+
+        if (bookingSpotId != spotId || isCanceled || isRefunded) {
+          continue;
+        }
+        if (paymentId.isEmpty) {
+          continue;
+        }
+        matchedBooking = booking;
+        break;
+      }
+
+      if (!mounted || matchedBooking == null) {
+        return;
+      }
+
+      final Map<String, dynamic> booking = matchedBooking;
+      final Map<String, dynamic> slot = booking['slot'] is Map
+          ? Map<String, dynamic>.from(booking['slot'])
+          : <String, dynamic>{};
+
+      setState(() {
+        _isBooked = true;
+        _bookingId = _readString(booking['_id']);
+        _paymentId = _readObjectId(booking['paymentId']);
+        _bookingDateLabel = _formatLongDate(booking['date']?.toString());
+        _bookingTimeRange = _formatBookingTimeRange(slot);
+        _bookingPrice = _readInt(
+          booking['spot'] is Map
+              ? booking['spot']['price'] ?? booking['totalAmount']
+              : booking['totalAmount'],
+        );
+      });
+    } catch (_) {
+      // Keep the current button state if this lookup fails.
+    }
+  }
+
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -283,7 +378,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
           : <String, dynamic>{};
       final dynamic raw = authRecord?.toJson();
       final Map<String, dynamic> record = raw is Map
-          ? Map<String, dynamic>.from(raw as Map)
+          ? Map<String, dynamic>.from(raw)
           : <String, dynamic>{};
       return _pickFirstString(<dynamic>[
         data['id'],
@@ -370,6 +465,46 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
     return '$month $day, ${dateTime.year}';
   }
 
+  String _formatBookingTimeRange(Map<String, dynamic> slot) {
+    final String start = _readString(slot['start']);
+    final String end = _readString(slot['end']);
+    if (start.isEmpty || end.isEmpty) {
+      return '';
+    }
+    return '${_formatTime(start)} - ${_formatTime(end)}';
+  }
+
+  String _formatTime(String value) {
+    final List<String> parts = value.split(':');
+    if (parts.length < 2) {
+      return value;
+    }
+    final int? hour = int.tryParse(parts[0]);
+    final int? minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) {
+      return value;
+    }
+    final int hour12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    final String suffix = hour >= 12 ? 'PM' : 'AM';
+    final String minuteText = minute.toString().padLeft(2, '0');
+    return '$hour12:$minuteText $suffix';
+  }
+
+  String? _readObjectId(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is Map) {
+      final String nestedId =
+          value['_id']?.toString().trim() ??
+          value['id']?.toString().trim() ??
+          '';
+      return nestedId.isEmpty ? null : nestedId;
+    }
+    final String text = value.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
   List<String> _readImages(dynamic images) {
     if (images is List) {
       return images
@@ -378,8 +513,6 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
             if (item is Map && item['url'] != null) {
               return item['url'].toString();
             }
-            if (item is Map && item['url'] != null)
-              return item['url'].toString();
             return '';
           })
           .where((String url) => url.isNotEmpty)
@@ -414,7 +547,27 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
   }
 
   void _openCancellationSheet() {
+    final BuildContext parentContext = context;
     String? selectedReason;
+    bool isSubmitting = false;
+    final List<String> previewPhotos = _readImages(_spot?['images']);
+    final String previewImage = previewPhotos.isNotEmpty
+        ? previewPhotos.first
+        : _fallbackPhotos.first;
+    final String previewTitle = _readString(
+      _spot?['title'],
+      fallback: 'Crystal Lake Sanctuary',
+    );
+    final String previewTimeRange = _readString(
+      _bookingTimeRange,
+      fallback: '7:00 AM - 5:00 PM',
+    );
+    final String previewDate = _readString(
+      _bookingDateLabel,
+      fallback: _formatLongDate(_spot?['createdAt']?.toString()),
+    );
+    final String previewLocation = _formatLocation(_spot?['location']);
+    final int previewPrice = _bookingPrice ?? _readInt(_spot?['price']);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -467,7 +620,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
-                              'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80',
+                              previewImage,
                               width: 72,
                               height: 56,
                               fit: BoxFit.cover,
@@ -484,30 +637,30 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const <Widget>[
+                              children: <Widget>[
                                 Text(
-                                  'Crystal Lake Sanctuary',
+                                  previewTitle,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                     color: Color(0xFF1D2A36),
                                   ),
                                 ),
-                                SizedBox(height: 4),
+                                const SizedBox(height: 4),
                                 Text(
-                                  '7:00 AM - 5:00 PM',
-                                  style: TextStyle(
+                                  previewTimeRange,
+                                  style: const TextStyle(
                                     fontSize: 9.5,
                                     color: Color(0xFF6A7B8C),
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                SizedBox(height: 2),
+                                const SizedBox(height: 2),
                                 Text(
-                                  'Montana, USA   •   Feb 05, 2026',
-                                  style: TextStyle(
+                                  '${previewLocation.isEmpty ? 'Unknown location' : previewLocation}   •   $previewDate',
+                                  style: const TextStyle(
                                     fontSize: 9.5,
                                     color: Color(0xFF6A7B8C),
                                     fontWeight: FontWeight.w500,
@@ -518,17 +671,17 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                           ),
                           const SizedBox(width: 8),
                           Column(
-                            children: const <Widget>[
-                              CircleAvatar(
+                            children: <Widget>[
+                              const CircleAvatar(
                                 radius: 12,
                                 backgroundImage: NetworkImage(
                                   'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 4),
                               Text(
-                                r'$120',
-                                style: TextStyle(
+                                '\$$previewPrice',
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF1E7CC8),
@@ -603,11 +756,30 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       width: double.infinity,
                       height: 42,
                       child: AppElevatedButton(
-                        onPressed: selectedReason == null
+                        onPressed: selectedReason == null || isSubmitting
                             ? null
-                            : () {
+                            : () async {
+                                setSheetState(() => isSubmitting = true);
+                                final bool success = await _requestRefund(
+                                  selectedReason!,
+                                );
+                                if (!mounted) {
+                                  return;
+                                }
+                                setSheetState(() => isSubmitting = false);
+                                if (!success) {
+                                  return;
+                                }
+                                if (!sheetContext.mounted) {
+                                  return;
+                                }
                                 Navigator.of(sheetContext).pop();
-                                context.push(HomeRouteNames.refundRequest);
+                                if (!parentContext.mounted) {
+                                  return;
+                                }
+                                await parentContext.push(
+                                  HomeRouteNames.refundRequest,
+                                );
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1787CF),
@@ -616,14 +788,25 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: const Text(
-                          'Request For Refund',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Request For Refund',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -634,6 +817,139 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         );
       },
     );
+  }
+
+  Future<bool> _requestRefund(String reason) async {
+    final String paymentId = _readString(_paymentId);
+    if (paymentId.isEmpty) {
+      _showMessage(context, 'Payment id is missing for this booking');
+      return false;
+    }
+
+    try {
+      final response = await _sendRefundRequest(
+        paymentId: paymentId,
+        reason: reason,
+      );
+      final Map<String, dynamic> responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final String message = _readString(
+        responseBody['message'],
+        fallback: 'Refund processed successfully',
+      );
+      if (!mounted) {
+        return false;
+      }
+      _showMessage(context, message);
+      setState(() => _isBooked = false);
+      return true;
+    } on DioException catch (e) {
+      final int statusCode = e.response?.statusCode ?? 0;
+      if (statusCode == 400) {
+        final bool confirmed = await _confirmBookingPayment();
+        if (confirmed) {
+          try {
+            final retryResponse = await _sendRefundRequest(
+              paymentId: paymentId,
+              reason: reason,
+            );
+            final Map<String, dynamic> retryBody = retryResponse.data is Map
+                ? Map<String, dynamic>.from(retryResponse.data as Map)
+                : <String, dynamic>{};
+            final String retryMessage = _readString(
+              retryBody['message'],
+              fallback: 'Refund processed successfully',
+            );
+            if (!mounted) {
+              return false;
+            }
+            _showMessage(context, retryMessage);
+            setState(() => _isBooked = false);
+            return true;
+          } on DioException catch (retryError) {
+            final dynamic retryData = retryError.response?.data;
+            final String retryMessage =
+                retryData is Map && retryData['message'] != null
+                ? retryData['message'].toString()
+                : 'Failed to request refund';
+            if (!mounted) {
+              return false;
+            }
+            _showMessage(context, retryMessage);
+            return false;
+          }
+        }
+      }
+      final dynamic responseData = e.response?.data;
+      final String message =
+          responseData is Map && responseData['message'] != null
+          ? responseData['message'].toString()
+          : 'Failed to request refund';
+      if (!mounted) {
+        return false;
+      }
+      _showMessage(context, message);
+      return false;
+    } catch (_) {
+      if (!mounted) {
+        return false;
+      }
+      _showMessage(context, 'Failed to request refund');
+      return false;
+    }
+  }
+
+  Future<dynamic> _sendRefundRequest({
+    required String paymentId,
+    required String reason,
+  }) {
+    return Get.find<AuthorizedPigeon>().post(
+      ApiEndpoints.paymentRefund(paymentId),
+      data: <String, dynamic>{'reason': reason},
+    );
+  }
+
+  Future<bool> _confirmBookingPayment() async {
+    final String bookingId = _readString(_bookingId);
+    if (bookingId.isEmpty) {
+      return false;
+    }
+
+    try {
+      final response = await Get.find<AuthorizedPigeon>().post(
+        ApiEndpoints.paymentConfirm,
+        data: <String, dynamic>{'bookingId': bookingId},
+      );
+      final Map<String, dynamic> responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final dynamic data = responseBody['data'];
+      if (data is Map) {
+        final String confirmedPaymentId = _readObjectId(data['payment']) ?? '';
+        if (confirmedPaymentId.isNotEmpty) {
+          _paymentId = confirmedPaymentId;
+        }
+        if (data['payment'] is Map) {
+          final Map<String, dynamic> payment = Map<String, dynamic>.from(
+            data['payment'] as Map,
+          );
+          final String confirmedPaymentId =
+              _readObjectId(payment['_id']) ??
+              _readObjectId(payment['id']) ??
+              '';
+          if (confirmedPaymentId.isNotEmpty) {
+            _paymentId = confirmedPaymentId;
+          }
+        }
+        return data['paid'] == true;
+      }
+      return false;
+    } on DioException {
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override

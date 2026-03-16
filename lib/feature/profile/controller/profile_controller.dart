@@ -151,6 +151,8 @@ class ProfileController extends GetxController {
         owner['fullName']?.toString().trim().isNotEmpty == true
         ? owner['fullName'].toString()
         : 'Spot Owner';
+    final String? bookingId = booking['_id']?.toString();
+    final String? paymentId = _readObjectId(booking['paymentId']);
     final String imagePath = _pickImageUrl(spot['images']);
     final String dateLabel = _formatDate(booking['date']?.toString());
     final String timeRange = _formatTimeRange(slot);
@@ -170,6 +172,9 @@ class ProfileController extends GetxController {
       reviewsCount: 0,
       pricePerDay: price,
       spotId: spotId,
+      bookingId: bookingId,
+      paymentId: paymentId,
+      bookingStatus: booking['status']?.toString() ?? '',
     );
   }
 
@@ -246,6 +251,19 @@ class ProfileController extends GetxController {
     if (value is int) return value;
     if (value is num) return value.round();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  String? _readObjectId(dynamic value) {
+    if (value == null) return null;
+    if (value is Map) {
+      final String nestedId =
+          value['_id']?.toString().trim() ??
+          value['id']?.toString().trim() ??
+          '';
+      return nestedId.isEmpty ? null : nestedId;
+    }
+    final String text = value.toString().trim();
+    return text.isEmpty ? null : text;
   }
 
   void updateProfile(UserProfileDataModel updatedProfile) {

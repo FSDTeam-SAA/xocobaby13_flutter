@@ -70,7 +70,10 @@ class FishermanActivityScreen extends StatelessWidget {
                 itemCount: visibleItems.length,
                 separatorBuilder: (_, int index) => const SizedBox(height: 16),
                 itemBuilder: (BuildContext context, int index) {
-                  return ActivityCard(item: visibleItems[index]);
+                  return ActivityCard(
+                    item: visibleItems[index],
+                    useDetailsRoute: true,
+                  );
                 },
               ),
             ),
