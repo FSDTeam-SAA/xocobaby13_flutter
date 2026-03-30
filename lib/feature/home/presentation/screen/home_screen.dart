@@ -437,8 +437,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Obx(() {
               final UserProfileDataModel profile =
                   ProfileController.instance().profile.value;
-              final String name =
-                  profile.name.trim().isEmpty ? 'Mack' : profile.name.trim();
+              final String name = profile.name.trim().isEmpty
+                  ? 'Mack'
+                  : profile.name.trim();
               return Row(
                 children: <Widget>[
                   _ProfileAvatar(imageProvider: profile.avatarImageProvider),
@@ -448,7 +449,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: <Widget>[
                       const Text(
                         'Good Morning',
-                        style: TextStyle(fontSize: 14, color: Color(0xFF3A4A5A)),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF3A4A5A),
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -574,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 14),
             SizedBox(
-              height: 450,
+              height: 460,
               child: _isLoadingNearby
                   ? const Center(child: CircularProgressIndicator())
                   : _nearbyError != null

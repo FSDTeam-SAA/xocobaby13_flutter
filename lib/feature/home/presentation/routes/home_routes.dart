@@ -27,6 +27,15 @@ class HomeRoutes {
         final bool isBooked =
             state.uri.queryParameters['booked']?.toLowerCase() == '1';
         final String? spotId = state.uri.queryParameters['id'];
+        final String? bookingId = state.uri.queryParameters['bookingId'];
+        final String? paymentId = state.uri.queryParameters['paymentId'];
+        final String? bookingDate = state.uri.queryParameters['bookingDate'];
+        final String? timeRange = state.uri.queryParameters['timeRange'];
+        final String? bookingStatus =
+            state.uri.queryParameters['bookingStatus'];
+        final int? bookingPrice = int.tryParse(
+          state.uri.queryParameters['price'] ?? '',
+        );
         double? readDouble(String key) {
           final raw = state.uri.queryParameters[key];
           if (raw == null) return null;
@@ -39,6 +48,12 @@ class HomeRoutes {
           lng: readDouble('lng'),
           distanceKm: readDouble('distanceKm'),
           spotId: spotId,
+          bookingId: bookingId,
+          paymentId: paymentId,
+          bookingDateLabel: bookingDate,
+          bookingTimeRange: timeRange,
+          bookingStatus: bookingStatus,
+          bookingPrice: bookingPrice,
         );
       },
     ),

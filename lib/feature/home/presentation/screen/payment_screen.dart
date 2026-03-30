@@ -132,6 +132,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
+  Future<dynamic> _confirmPaymentRequest() async {
+    final AuthorizedPigeon pigeon = Get.find<AuthorizedPigeon>();
+    try {
+      return await pigeon.post(
+        ApiEndpoints.paymentConfirm,
+        data: <String, dynamic>{'bookingId': widget.bookingId},
+      );
+    } on DioException catch (e) {
+      final int statusCode = e.response?.statusCode ?? 0;
+      if (statusCode == 404 || statusCode == 405) {
+        return pigeon.post(
+          ApiEndpoints.paymentConfirmLegacy,
+          data: <String, dynamic>{'bookingId': widget.bookingId},
+        );
+      }
+      rethrow;
+    }
+  }
+
   Future<void> _payNow() async {
     if (_isPaying) return;
     if (widget.bookingId.trim().isEmpty) {
@@ -172,6 +191,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       if (!mounted) return;
       if (paid == true) {
+        final confirmResponse = await _confirmPaymentRequest();
+        final Map<String, dynamic> confirmBody = confirmResponse.data is Map
+            ? Map<String, dynamic>.from(confirmResponse.data as Map)
+            : <String, dynamic>{};
+        final bool confirmSuccess = confirmBody['success'] == null
+            ? true
+            : confirmBody['success'] == true;
+        final bool isConfirmed = confirmBody['data'] is Map
+            ? (confirmBody['data']['paid'] == true)
+            : false;
+
+        if (!confirmSuccess || !isConfirmed) {
+          if (!mounted) return;
+          _showMessage(
+            _responseMessage(
+              confirmBody,
+              fallback: 'Payment completed, but confirmation failed',
+            ),
+          );
+          return;
+        }
+
+        if (!mounted) return;
         context.pop(true);
       }
     } on DioException catch (e) {
@@ -543,6 +585,7 @@ class _CheckoutWebViewScreenState extends State<_CheckoutWebViewScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
   bool _isHandled = false;
+  bool _resultScheduled = false;
 
   @override
   void initState() {
@@ -650,9 +693,13 @@ class _CheckoutWebViewScreenState extends State<_CheckoutWebViewScreen> {
   }
 
   void _finish(bool paid) {
-    if (_isHandled || !mounted) return;
+    if (_isHandled || _resultScheduled || !mounted) return;
+    _resultScheduled = true;
     _isHandled = true;
-    Navigator.of(context).pop(paid);
+    Future<void>.delayed(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      Navigator.of(context).pop(paid);
+    });
   }
 
   @override

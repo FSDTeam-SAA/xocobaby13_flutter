@@ -200,6 +200,26 @@ class ActivityCard extends StatelessWidget {
                   if (item.spotId != null && item.spotId!.isNotEmpty) {
                     query['id'] = item.spotId!;
                   }
+                  query['booked'] =
+                      item.paymentId != null && item.paymentId!.isNotEmpty
+                      ? '1'
+                      : '0';
+                  if (item.bookingId != null && item.bookingId!.isNotEmpty) {
+                    query['bookingId'] = item.bookingId!;
+                  }
+                  if (item.paymentId != null && item.paymentId!.isNotEmpty) {
+                    query['paymentId'] = item.paymentId!;
+                  }
+                  if (item.dateLabel.isNotEmpty) {
+                    query['bookingDate'] = item.dateLabel;
+                  }
+                  if (item.timeRange.isNotEmpty) {
+                    query['timeRange'] = item.timeRange;
+                  }
+                  if (item.bookingStatus.isNotEmpty) {
+                    query['bookingStatus'] = item.bookingStatus;
+                  }
+                  query['price'] = item.pricePerDay.toString();
                   final detailsUri = Uri(
                     path: HomeRouteNames.details,
                     queryParameters: query.isEmpty ? null : query,
