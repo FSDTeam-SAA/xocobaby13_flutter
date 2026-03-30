@@ -9,6 +9,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/feature/chat/model/chat_api_mapper.dart';
 import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
+import 'package:xocobaby13/feature/home/controller/live_booking_controller.dart';
 import 'package:xocobaby13/feature/chat/presentation/routes/chat_routes.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
@@ -843,6 +844,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       }
       _showMessage(context, message);
       setState(() => _isBooked = false);
+      LiveBookingController.instance().loadLiveBookings();
       return true;
     } on DioException catch (e) {
       final int statusCode = e.response?.statusCode ?? 0;
@@ -866,6 +868,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
             }
             _showMessage(context, retryMessage);
             setState(() => _isBooked = false);
+            LiveBookingController.instance().loadLiveBookings();
             return true;
           } on DioException catch (retryError) {
             final dynamic retryData = retryError.response?.data;
@@ -942,7 +945,11 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
             _paymentId = confirmedPaymentId;
           }
         }
-        return data['paid'] == true;
+        final bool isPaid = data['paid'] == true;
+        if (isPaid) {
+          LiveBookingController.instance().loadLiveBookings();
+        }
+        return isPaid;
       }
       return false;
     } on DioException {

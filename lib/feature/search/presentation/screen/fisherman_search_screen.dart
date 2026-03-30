@@ -125,10 +125,40 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Column(
               children: <Widget>[
-                _SearchBar(
-                  controller: _controller,
-                  hintText: 'Search for areas',
-                  onChanged: _onQueryChanged,
+                Row(
+                  children: <Widget>[
+                    GestureDetector(
+                      onTap: () => context.pop(),
+                      child: Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: const <BoxShadow>[
+                            BoxShadow(
+                              color: Color(0x1A0F172A),
+                              blurRadius: 16,
+                              offset: Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.back,
+                          color: Color(0xFF1E7CC8),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _SearchBar(
+                        controller: _controller,
+                        hintText: 'Search for areas',
+                        onChanged: _onQueryChanged,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Expanded(

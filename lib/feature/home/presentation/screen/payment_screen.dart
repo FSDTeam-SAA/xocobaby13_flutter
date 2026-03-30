@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
+import 'package:xocobaby13/feature/home/controller/live_booking_controller.dart';
 
 class PaymentScreen extends StatefulWidget {
   final String bookingId;
@@ -212,6 +213,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
           );
           return;
         }
+
+        LiveBookingController.instance().loadLiveBookings();
 
         if (!mounted) return;
         context.pop(true);

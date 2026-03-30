@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/feature/home/controller/live_booking_controller.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
 import 'package:xocobaby13/feature/search/presentation/routes/search_routes.dart';
@@ -20,9 +21,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final PageController _liveController;
-  bool _isLoadingLive = false;
-  String? _liveError;
-  List<_LiveEvent> _liveEvents = const <_LiveEvent>[];
+  late final LiveBookingController _liveBookingController;
   bool _isLoadingNearby = false;
   String? _nearbyError;
   List<_PopularPlace> _popularPlaces = const <_PopularPlace>[];
@@ -71,7 +70,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _liveController = PageController();
-    _loadLiveBookings();
+    _liveBookingController = LiveBookingController.instance();
+    _liveBookingController.loadLiveBookings();
     _loadNearbySpots();
     _loadRecommendedSpots();
     _loadUnreadCount();
@@ -83,92 +83,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _loadLiveBookings() async {
-    if (_isLoadingLive) return;
-    setState(() {
-      _isLoadingLive = true;
-      _liveError = null;
-    });
-    try {
-      final response = await Get.find<AuthorizedPigeon>().get(
-        ApiEndpoints.getMyBookings,
-      );
-      final responseBody = response.data is Map
-          ? Map<String, dynamic>.from(response.data as Map)
-          : <String, dynamic>{};
-      final data = responseBody['data'];
-      final List<_LiveEvent> bookings = <_LiveEvent>[];
-      if (data is List) {
-        for (final item in data) {
-          if (item is Map) {
-            bookings.add(
-              _mapBookingToLiveEvent(Map<String, dynamic>.from(item)),
-            );
-          }
-        }
-      }
-      if (!mounted) return;
-      setState(() {
-        _liveEvents = bookings;
-        _isLoadingLive = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _liveError = 'Failed to load live bookings';
-        _isLoadingLive = false;
-      });
-    }
-  }
-
-  _LiveEvent _mapBookingToLiveEvent(Map<String, dynamic> booking) {
-    final Map<String, dynamic> spot = booking['spot'] is Map
-        ? Map<String, dynamic>.from(booking['spot'])
-        : {};
-    final Map<String, dynamic> owner = booking['owner'] is Map
-        ? Map<String, dynamic>.from(booking['owner'])
-        : {};
-    final Map<String, dynamic> slot = booking['slot'] is Map
-        ? Map<String, dynamic>.from(booking['slot'])
-        : {};
-    final String title = _readString(spot['title'], fallback: 'Spot Booking');
-    final String location = 'Unknown location';
-    final String date = _formatDate(booking['date']?.toString());
-    final String time =
-        '${_readString(slot['start'], fallback: '00:00')} - ${_readString(slot['end'], fallback: '00:00')}';
-    final String hostName = _readString(
-      owner['fullName'],
-      fallback: 'Spot Owner',
-    );
-    final String hostAvatarUrl = _defaultAttendees.first;
-    final String imageUrl = _pickImageUrl(spot['images']).isEmpty
-        ? 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80'
-        : _pickImageUrl(spot['images']);
-
-    return _LiveEvent(
-      id: booking['_id']?.toString(),
-      title: title,
-      location: location,
-      date: date,
-      time: time,
-      hostName: hostName,
-      rating: 0,
-      reviews: 0,
-      imageUrl: imageUrl,
-      hostAvatarUrl: hostAvatarUrl,
-      isArrived: false,
-    );
-  }
-
   void _handleLiveStatusTap(int index) {
-    setState(() {
-      final _LiveEvent event = _liveEvents[index];
-      if (!event.isArrived) {
-        _liveEvents[index] = event.copyWith(isArrived: true);
-      } else {
-        _liveEvents = List<_LiveEvent>.from(_liveEvents)..removeAt(index);
-      }
-    });
+    _liveBookingController.toggleArrivalAt(index);
   }
 
   Future<void> _loadNearbySpots() async {
@@ -365,11 +281,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$month $day, ${dateTime.year}';
   }
 
-  String _readString(dynamic value, {String fallback = ''}) {
-    final String text = value?.toString().trim() ?? '';
-    return text.isEmpty ? fallback : text;
-  }
-
   String _pickImageUrl(dynamic images) {
     if (images is List && images.isNotEmpty) {
       final first = images.first;
@@ -493,84 +404,96 @@ class _HomeScreenState extends State<HomeScreen> {
               onSubmitted: (String value) =>
                   _showMessage(context, 'Searching for "$value"'),
             ),
-            const SizedBox(height: 22),
-            _SectionHeader(
-              title: 'Live',
-              actionLabel: 'See all',
-              onActionTap: () => _showMessage(context, 'Live'),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 126,
-              child: _isLoadingLive
-                  ? const Center(child: CircularProgressIndicator())
-                  : _liveError != null
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Text(
-                            _liveError!,
-                            style: const TextStyle(
-                              color: Color(0xFF6A7B8C),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+            Obx(() {
+              final bool isLoading = _liveBookingController.isLoading.value;
+              final String? liveError = _liveBookingController.error.value;
+              final List<LiveBookingItem> liveEvents = _liveBookingController
+                  .events
+                  .toList(growable: false);
+              final bool showLiveSection =
+                  isLoading || liveError != null || liveEvents.isNotEmpty;
+
+              if (!showLiveSection) {
+                return const SizedBox(height: 18);
+              }
+
+              return Column(
+                children: <Widget>[
+                  const SizedBox(height: 22),
+                  _SectionHeader(
+                    title: 'Live',
+                    actionLabel: 'See all',
+                    onActionTap: () => _showMessage(context, 'Live'),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 126,
+                    child: isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : liveError != null
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text(
+                                  liveError,
+                                  style: const TextStyle(
+                                    color: Color(0xFF6A7B8C),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                AppTextButton(
+                                  onPressed:
+                                      _liveBookingController.loadLiveBookings,
+                                  child: const Text('Retry'),
+                                ),
+                              ],
                             ),
+                          )
+                        : PageView.builder(
+                            controller: _liveController,
+                            itemCount: liveEvents.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              return AnimatedBuilder(
+                                animation: _liveController,
+                                child: _LiveEventCard(
+                                  data: liveEvents[index],
+                                  onStatusTap: () =>
+                                      _handleLiveStatusTap(index),
+                                ),
+                                builder: (BuildContext context, Widget? child) {
+                                  double scale = 1;
+                                  double translate = 0;
+                                  if (_liveController.hasClients) {
+                                    final double page =
+                                        _liveController.page ??
+                                        _liveController.initialPage.toDouble();
+                                    final double delta = (page - index).abs();
+                                    scale = (1 - (delta * 0.05)).clamp(
+                                      0.95,
+                                      1.0,
+                                    );
+                                    translate = (delta * 6).clamp(0.0, 6.0);
+                                  }
+                                  return Transform.translate(
+                                    offset: Offset(translate, 0),
+                                    child: Transform.scale(
+                                      scale: scale,
+                                      alignment: Alignment.center,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                              );
+                            },
                           ),
-                          const SizedBox(height: 8),
-                          AppTextButton(
-                            onPressed: _loadLiveBookings,
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : _liveEvents.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No live bookings',
-                        style: TextStyle(
-                          color: Color(0xFF6A7B8C),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    )
-                  : PageView.builder(
-                      controller: _liveController,
-                      itemCount: _liveEvents.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        return AnimatedBuilder(
-                          animation: _liveController,
-                          child: _LiveEventCard(
-                            data: _liveEvents[index],
-                            onStatusTap: () => _handleLiveStatusTap(index),
-                          ),
-                          builder: (BuildContext context, Widget? child) {
-                            double scale = 1;
-                            double translate = 0;
-                            if (_liveController.hasClients) {
-                              final double page =
-                                  _liveController.page ??
-                                  _liveController.initialPage.toDouble();
-                              final double delta = (page - index).abs();
-                              scale = (1 - (delta * 0.05)).clamp(0.95, 1.0);
-                              translate = (delta * 6).clamp(0.0, 6.0);
-                            }
-                            return Transform.translate(
-                              offset: Offset(translate, 0),
-                              child: Transform.scale(
-                                scale: scale,
-                                alignment: Alignment.center,
-                                child: child,
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-            ),
-            const SizedBox(height: 18),
+                  ),
+                  const SizedBox(height: 18),
+                ],
+              );
+            }),
             _SectionHeader(
               title: 'Popular Nearby',
               actionLabel: 'See all',
@@ -893,7 +816,7 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _LiveEventCard extends StatelessWidget {
-  final _LiveEvent data;
+  final LiveBookingItem data;
   final VoidCallback onStatusTap;
 
   const _LiveEventCard({required this.data, required this.onStatusTap});
@@ -1576,50 +1499,6 @@ class _RecommendedCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _LiveEvent {
-  final String? id;
-  final String title;
-  final String location;
-  final String date;
-  final String time;
-  final String hostName;
-  final double rating;
-  final int reviews;
-  final String imageUrl;
-  final String hostAvatarUrl;
-  final bool isArrived;
-
-  const _LiveEvent({
-    this.id,
-    required this.title,
-    required this.location,
-    required this.date,
-    required this.time,
-    required this.hostName,
-    required this.rating,
-    required this.reviews,
-    required this.imageUrl,
-    required this.hostAvatarUrl,
-    required this.isArrived,
-  });
-
-  _LiveEvent copyWith({bool? isArrived}) {
-    return _LiveEvent(
-      id: id,
-      title: title,
-      location: location,
-      date: date,
-      time: time,
-      hostName: hostName,
-      rating: rating,
-      reviews: reviews,
-      imageUrl: imageUrl,
-      hostAvatarUrl: hostAvatarUrl,
-      isArrived: isArrived ?? this.isArrived,
     );
   }
 }
