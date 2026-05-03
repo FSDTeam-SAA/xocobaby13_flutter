@@ -196,8 +196,8 @@ class _RemoteServer {
 
 class _LocalHostWifi {
   static const String socketUrl = 'http://localhost:5000';
-  static const String baseUrl = 'http://localhost:5000/api/v1';
-  // static const String baseUrl ='https://backend-xocobaby-rf6o.onrender.com/api/v1';
+  // static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl ='https://backend-xocobaby-rf6o.onrender.com/api/v1';
 }
 
 class _Auth {
