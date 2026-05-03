@@ -2,9 +2,10 @@ import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
+import 'package:xocobaby13/core/common/widget/loading/app_shimmer.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -179,7 +180,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       Row(
                         children: <Widget>[
                           GestureDetector(
-                            onTap: () => context.pop(),
+                            onTap: () => context.safePop(),
                             child: const Icon(
                               CupertinoIcons.back,
                               size: 20,
@@ -224,8 +225,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       const SizedBox(height: 12),
                       if (_isLoading)
                         const Padding(
-                          padding: EdgeInsets.only(top: 40),
-                          child: Center(child: CircularProgressIndicator()),
+                          padding: EdgeInsets.only(top: 8),
+                          child: Column(
+                            children: <Widget>[
+                              _NotificationCardSkeleton(),
+                              _NotificationCardSkeleton(),
+                              _NotificationCardSkeleton(),
+                            ],
+                          ),
                         )
                       else if (_loadError != null)
                         Padding(
@@ -295,6 +302,49 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NotificationCardSkeleton extends StatelessWidget {
+  const _NotificationCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE0ECF8), width: 1),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          AppShimmerBox(width: 50, height: 50, shape: BoxShape.circle),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AppShimmerBox(width: 180, height: 13),
+                SizedBox(height: 8),
+                AppShimmerBox(width: double.infinity, height: 11),
+                SizedBox(height: 6),
+                AppShimmerBox(width: 220, height: 11),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

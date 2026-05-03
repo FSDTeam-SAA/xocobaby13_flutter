@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 
 class SpotOwnerProfilePalette {
   const SpotOwnerProfilePalette._();
@@ -73,7 +73,7 @@ class SpotOwnerFlowScaffold extends StatelessWidget {
                   children: <Widget>[
                     if (showBack)
                       AppIconButton(
-                        onPressed: () => context.pop(),
+                        onPressed: () => context.safePop(),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                         icon: const Icon(

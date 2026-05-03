@@ -2,6 +2,7 @@ import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
 import 'package:xocobaby13/feature/auth/interface/auth_interface.dart';
 import 'package:xocobaby13/feature/auth/model/logout_request_model.dart';
@@ -78,7 +79,7 @@ class _FishermanLogoutScreenState extends State<FishermanLogoutScreen> {
                   child: SizedBox(
                     height: 50,
                     child: AppElevatedButton(
-                      onPressed: () => context.pop(),
+                      onPressed: () => context.safePop(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFE5E5E5),
                         foregroundColor: const Color(0xFF111418),

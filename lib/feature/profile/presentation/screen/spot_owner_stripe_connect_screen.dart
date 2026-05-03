@@ -21,19 +21,39 @@ class _SpotOwnerStripeConnectScreenState
   int? _expiresAt;
   String _statusMessage = '';
 
+  @override
+  void initState() {
+    super.initState();
+    _loadOnboardingStatus();
+  }
+
+  Future<void> _loadOnboardingStatus() async {
+    try {
+      await _fetchOnboardState(showErrorMessage: false, createLink: false);
+    } catch (_) {
+      // Keep the screen usable even when status lookup fails.
+    }
+  }
+
   Future<void> _connectStripeAccount() async {
     if (_isConnecting) return;
     setState(() => _isConnecting = true);
     try {
       final _StripeOnboardState? initialState = await _fetchOnboardState(
         showErrorMessage: true,
+        createLink: false,
       );
       if (!mounted || initialState == null) return;
       if (initialState.onboarded) {
         await _showConnectedDialog();
         return;
       }
-      if (initialState.onboardingUrl.trim().isEmpty) {
+      final _StripeOnboardState? onboardingState = await _fetchOnboardState(
+        showErrorMessage: true,
+        createLink: true,
+      );
+      if (!mounted || onboardingState == null) return;
+      if (onboardingState.onboardingUrl.trim().isEmpty) {
         _showMessage('Onboarding URL is missing');
         return;
       }
@@ -41,7 +61,7 @@ class _SpotOwnerStripeConnectScreenState
       await Navigator.of(context).push<bool>(
         MaterialPageRoute<bool>(
           builder: (_) => SpotOwnerStripeOnboardingWebViewScreen(
-            onboardingUrl: initialState.onboardingUrl,
+            onboardingUrl: onboardingState.onboardingUrl,
           ),
         ),
       );
@@ -49,6 +69,7 @@ class _SpotOwnerStripeConnectScreenState
       if (!mounted) return;
       final _StripeOnboardState? latestState = await _fetchOnboardState(
         showErrorMessage: false,
+        createLink: false,
       );
       if (!mounted || latestState == null) return;
       if (latestState.onboarded) {
@@ -77,10 +98,12 @@ class _SpotOwnerStripeConnectScreenState
 
   Future<_StripeOnboardState?> _fetchOnboardState({
     required bool showErrorMessage,
+    required bool createLink,
   }) async {
-    final response = await Get.find<AuthorizedPigeon>().post(
-      ApiEndpoints.paymentOnboard,
-    );
+    final AuthorizedPigeon pigeon = Get.find<AuthorizedPigeon>();
+    final response = createLink
+        ? await pigeon.post(ApiEndpoints.paymentOnboard)
+        : await pigeon.get(ApiEndpoints.paymentOnboardStatus);
     final Map<String, dynamic> responseBody = response.data is Map
         ? Map<String, dynamic>.from(response.data as Map)
         : <String, dynamic>{};
@@ -248,7 +271,7 @@ class _SpotOwnerStripeConnectScreenState
   @override
   Widget build(BuildContext context) {
     return SpotOwnerFlowScaffold(
-      title: 'Link Stripe Account',
+      title: 'Connect Stripe',
       showBack: true,
       child: Column(
         children: <Widget>[
@@ -366,7 +389,8 @@ class _SpotOwnerStripeConnectScreenState
                         const SizedBox(height: 7),
                         const _StepRow(
                           index: '3',
-                          text: 'Return and continue linking bank account',
+                          text:
+                              'Complete payout details inside Stripe if prompted',
                         ),
                       ],
                     ),

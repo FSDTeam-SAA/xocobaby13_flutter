@@ -2,10 +2,10 @@ import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 import 'package:xocobaby13/feature/home/controller/live_booking_controller.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -217,7 +217,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         LiveBookingController.instance().loadLiveBookings();
 
         if (!mounted) return;
-        context.pop(true);
+        context.safePop(true);
       }
     } on DioException catch (e) {
       if (!mounted) return;
@@ -272,7 +272,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   child: Row(
                     children: <Widget>[
                       GestureDetector(
-                        onTap: () => context.pop(false),
+                        onTap: () => context.safePop(false),
                         child: const Icon(
                           CupertinoIcons.back,
                           color: Color(0xFF1D2A36),

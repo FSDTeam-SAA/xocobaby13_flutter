@@ -108,6 +108,7 @@ base class ApiEndpoints {
   // ---------------------- Payment -----------------------------
   /// ### post
   static const String paymentOnboard = _Payment.onboard;
+  static const String paymentOnboardStatus = _Payment.onboardStatus;
   static const String paymentCreate = _Payment.create;
   static const String paymentConfirm = _Payment.confirm;
   static const String paymentCreateLegacy = _Payment.createLegacy;
@@ -196,8 +197,9 @@ class _RemoteServer {
 
 class _LocalHostWifi {
   static const String socketUrl = 'http://localhost:5000';
-  // static const String baseUrl = 'http://localhost:5000/api/v1';
-  static const String baseUrl ='https://backend-xocobaby-rf6o.onrender.com/api/v1';
+  static const String baseUrl = 'http://localhost:5000/api/v1';
+  // static const String baseUrl =
+  //     'https://backend-xocobaby-rf6o.onrender.com/api/v1';
 }
 
 class _Auth {
@@ -294,6 +296,7 @@ class _Mt {
 class _Payment {
   static const String _paymentRoute = '${ApiEndpoints.baseUrl}/payment';
   static const String onboard = '$_paymentRoute/onboard';
+  static const String onboardStatus = '$_paymentRoute/onboard/status';
   static const String create = _paymentRoute;
   static const String confirm = '$_paymentRoute/confirm';
   static const String createLegacy = '$_paymentRoute/create-payment';

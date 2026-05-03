@@ -59,7 +59,20 @@ class HomeRoutes {
     ),
     GoRoute(
       path: HomeRouteNames.direction,
-      builder: (context, state) => const DirectionMapScreen(),
+      builder: (context, state) {
+        final double? lat = double.tryParse(
+          state.uri.queryParameters['lat'] ?? '',
+        );
+        final double? lng = double.tryParse(
+          state.uri.queryParameters['lng'] ?? '',
+        );
+        return DirectionMapScreen(
+          title: state.uri.queryParameters['title']?.trim() ?? '',
+          address: state.uri.queryParameters['address']?.trim() ?? '',
+          lat: lat,
+          lng: lng,
+        );
+      },
     ),
     GoRoute(
       path: HomeRouteNames.payment,

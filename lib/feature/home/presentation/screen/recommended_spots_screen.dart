@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/core/common/widget/loading/app_shimmer.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 
 class RecommendedSpotsScreen extends StatefulWidget {
@@ -177,7 +179,7 @@ class _RecommendedSpotsScreenState extends State<RecommendedSpotsScreen> {
               child: Row(
                 children: <Widget>[
                   GestureDetector(
-                    onTap: () => context.pop(),
+                    onTap: () => context.safePop(),
                     child: const Icon(
                       CupertinoIcons.back,
                       size: 20,
@@ -198,7 +200,13 @@ class _RecommendedSpotsScreenState extends State<RecommendedSpotsScreen> {
             ),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                      itemCount: 6,
+                      separatorBuilder: (_, __) => const SizedBox(height: 14),
+                      itemBuilder: (_, __) =>
+                          const _RecommendedSpotCardSkeleton(),
+                    )
                   : _error != null
                   ? Center(
                       child: Text(
@@ -251,6 +259,46 @@ class _RecommendedSpotsScreenState extends State<RecommendedSpotsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RecommendedSpotCardSkeleton extends StatelessWidget {
+  const _RecommendedSpotCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const Row(
+        children: <Widget>[
+          AppShimmerBox(width: 64, height: 64),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AppShimmerBox(width: 160, height: 14),
+                SizedBox(height: 8),
+                AppShimmerBox(width: 200, height: 11),
+                SizedBox(height: 8),
+                AppShimmerBox(width: 140, height: 11),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -7,6 +7,8 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
+import 'package:xocobaby13/core/common/widget/loading/app_shimmer.dart';
 import 'package:xocobaby13/feature/chat/model/chat_api_mapper.dart';
 import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
 import 'package:xocobaby13/feature/home/controller/live_booking_controller.dart';
@@ -473,6 +475,30 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       return '';
     }
     return '${_formatTime(start)} - ${_formatTime(end)}';
+  }
+
+  String _firstAvailabilityLabel(dynamic availability) {
+    if (availability is! List || availability.isEmpty) {
+      return 'Flexible';
+    }
+    final dynamic firstAvailability = availability.first;
+    if (firstAvailability is! Map) {
+      return 'Flexible';
+    }
+    final dynamic slots = firstAvailability['slots'];
+    if (slots is! List || slots.isEmpty) {
+      return 'Flexible';
+    }
+    final dynamic firstSlot = slots.first;
+    if (firstSlot is! Map) {
+      return 'Flexible';
+    }
+    final String start = _readString(firstSlot['start']);
+    final String end = _readString(firstSlot['end']);
+    if (start.isEmpty || end.isEmpty) {
+      return 'Flexible';
+    }
+    return '$start - $end';
   }
 
   String _formatTime(String value) {
@@ -976,14 +1002,16 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
     );
     final String description = _readString(
       spot?['description'],
-      fallback:
-          'Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.',
+      fallback: 'No description has been added for this spot yet.',
     );
     final int price = _readInt(spot?['price']);
     final double rating = _readDouble(spot?['ratingAvg']);
     final int reviews = _readInt(spot?['ratingCount']);
     final String dateLabel = _formatDate(spot?['createdAt']?.toString());
-    final List<String> features = _readTags(spot?['features']);
+    final List<String> facilities = _readTags(
+      spot?['facilities'] ?? spot?['features'],
+    );
+    final List<String> restrictions = _readTags(spot?['restrictions']);
     final String hostName = _readString(
       spot?['owner']?['fullName'],
       fallback: 'John Mitchell',
@@ -1000,6 +1028,13 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       target: mapCenter,
       zoom: _zoomForDistance(widget.distanceKm),
     );
+    final int bookedSlots = _readInt(spot?['bookedSlots']);
+    final int availableSlots = _readInt(spot?['availableSlots']);
+    final int totalSlots = _readInt(spot?['totalSlots']);
+    final String timeLabel = _readString(
+      _bookingTimeRange,
+      fallback: _firstAvailabilityLabel(spot?['availability']),
+    );
     final Set<Marker> mapMarkers = <Marker>{
       Marker(markerId: const MarkerId('spot'), position: mapCenter),
     };
@@ -1007,7 +1042,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
     if (_isLoadingSpot && spot == null) {
       return const Scaffold(
         backgroundColor: Color(0xFFF2F9FF),
-        body: SafeArea(child: Center(child: CircularProgressIndicator())),
+        body: SafeArea(child: _HomeDetailsSkeleton()),
       );
     }
 
@@ -1025,7 +1060,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     Row(
                       children: <Widget>[
                         GestureDetector(
-                          onTap: () => context.pop(),
+                          onTap: () => context.safePop(),
                           child: const Icon(
                             CupertinoIcons.back,
                             size: 20,
@@ -1264,11 +1299,11 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                             ],
                           ),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'All day',
+                            timeLabel,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF1D2A36),
@@ -1294,7 +1329,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                         Expanded(
                           child: Align(
                             alignment: Alignment.centerLeft,
-                            child: _DetailStatLabel(label: 'Max Guests'),
+                            child: _DetailStatLabel(label: 'Booked Slots'),
                           ),
                         ),
                         Expanded(
@@ -1308,12 +1343,14 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                     const SizedBox(height: 4),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
-                      children: const <Widget>[
+                      children: <Widget>[
                         Expanded(
                           child: Text(
-                            '2 Person',
+                            totalSlots > 0
+                                ? '$bookedSlots/$totalSlots Slots'
+                                : '$bookedSlots Slots',
                             textAlign: TextAlign.left,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF1D2A36),
@@ -1322,9 +1359,11 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                         ),
                         Expanded(
                           child: Text(
-                            '60/100 Slots',
+                            totalSlots > 0
+                                ? '$availableSlots/$totalSlots Slots'
+                                : '$availableSlots Slots',
                             textAlign: TextAlign.right,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF1E7CC8),
@@ -1343,7 +1382,9 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _TagWrap(tags: features.isEmpty ? _fallbackTags : features),
+                    _TagWrap(
+                      tags: facilities.isEmpty ? _fallbackTags : facilities,
+                    ),
                     const SizedBox(height: 14),
                     const Text(
                       'Restriction',
@@ -1354,7 +1395,11 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _TagWrap(tags: features.isEmpty ? _fallbackTags : features),
+                    _TagWrap(
+                      tags: restrictions.isEmpty
+                          ? const <String>['No restrictions listed']
+                          : restrictions,
+                    ),
                     const SizedBox(height: 14),
                     const Text(
                       'Description',
@@ -1505,7 +1550,25 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                           top: 12,
                           right: 12,
                           child: GestureDetector(
-                            onTap: () => context.push(HomeRouteNames.direction),
+                            onTap: () {
+                              if (spotLatLng == null) {
+                                _showMessage(
+                                  context,
+                                  'This spot does not have a saved map location yet',
+                                );
+                                return;
+                              }
+                              final Uri directionUri = Uri(
+                                path: HomeRouteNames.direction,
+                                queryParameters: <String, String>{
+                                  'title': title,
+                                  'address': locationLabel,
+                                  'lat': spotLatLng.latitude.toString(),
+                                  'lng': spotLatLng.longitude.toString(),
+                                },
+                              );
+                              context.push(directionUri.toString());
+                            },
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
@@ -1611,6 +1674,51 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _HomeDetailsSkeleton extends StatelessWidget {
+  const _HomeDetailsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 112),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const <Widget>[
+          Row(
+            children: <Widget>[
+              AppShimmerBox(width: 24, height: 24, shape: BoxShape.circle),
+              SizedBox(width: 10),
+              AppShimmerBox(width: 100, height: 16),
+            ],
+          ),
+          SizedBox(height: 14),
+          AppShimmerBox(height: 310, width: double.infinity),
+          SizedBox(height: 14),
+          AppShimmerBox(width: 110, height: 16),
+          SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              Expanded(child: AppShimmerBox(height: 62)),
+              SizedBox(width: 10),
+              Expanded(child: AppShimmerBox(height: 62)),
+              SizedBox(width: 10),
+              Expanded(child: AppShimmerBox(height: 62)),
+            ],
+          ),
+          SizedBox(height: 18),
+          AppShimmerBox(width: 220, height: 26),
+          SizedBox(height: 10),
+          AppShimmerBox(width: 180, height: 14),
+          SizedBox(height: 18),
+          AppShimmerBox(width: double.infinity, height: 120),
+          SizedBox(height: 18),
+          AppShimmerBox(width: double.infinity, height: 220),
+        ],
       ),
     );
   }

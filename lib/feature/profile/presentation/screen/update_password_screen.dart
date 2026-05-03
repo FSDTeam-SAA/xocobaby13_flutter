@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/notifiers/button_status_notifier.dart';
 import 'package:xocobaby13/core/notifiers/snackbar_notifier.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 import 'package:xocobaby13/feature/auth/controller/change_password_controller.dart';
-import 'package:xocobaby13/feature/profile/presentation/routes/profile_routes.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_text_field.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
@@ -64,9 +63,7 @@ class _UpdatePasswordScreenState extends State<UpdatePasswordScreen> {
   void _save() {
     FocusScope.of(context).unfocus();
     _syncControllerState();
-    _controller.changePassword(
-      onSuccess: () => context.pop(),
-    );
+    _controller.changePassword(onSuccess: () => context.safePop());
   }
 
   @override

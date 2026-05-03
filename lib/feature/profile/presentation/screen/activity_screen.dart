@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:xocobaby13/core/common/widget/loading/app_shimmer.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/model/activity_item_model.dart';
 import 'package:xocobaby13/feature/profile/model/activity_status_model.dart';
@@ -27,6 +28,8 @@ class ActivityScreen extends StatelessWidget {
     final Widget content = Obx(() {
       final List<ActivityItemModel> visibleItems =
           controller.filteredActivityItems;
+      final bool isLoading = controller.isLoadingActivities.value;
+      final String? errorMessage = controller.activitiesError.value;
 
       final Widget tabs = Row(
         children: ActivityStatusModel.values.map((ActivityStatusModel status) {
@@ -65,7 +68,20 @@ class ActivityScreen extends StatelessWidget {
             children: <Widget>[
               tabs,
               const SizedBox(height: 18),
-              ...cardWidgets,
+              if (isLoading)
+                const Column(
+                  children: <Widget>[
+                    _ActivityCardSkeleton(),
+                    SizedBox(height: 18),
+                    _ActivityCardSkeleton(),
+                  ],
+                )
+              else if (errorMessage != null)
+                _ActivityPlaceholder(message: errorMessage)
+              else if (cardWidgets.isEmpty)
+                const _ActivityPlaceholder(message: 'No activity found yet')
+              else
+                ...cardWidgets,
             ],
           ),
         );
@@ -77,17 +93,30 @@ class ActivityScreen extends StatelessWidget {
           tabs,
           const SizedBox(height: 16),
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.only(bottom: 12),
-              itemCount: visibleItems.length,
-              separatorBuilder: (_, int index) => const SizedBox(height: 16),
-              itemBuilder: (BuildContext context, int index) {
-                return ActivityCard(
-                  item: visibleItems[index],
-                  useDetailsRoute: useDetailsRoute,
-                );
-              },
-            ),
+            child: isLoading
+                ? ListView.separated(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    itemCount: 4,
+                    separatorBuilder: (_, int index) =>
+                        const SizedBox(height: 16),
+                    itemBuilder: (_, __) => const _ActivityCardSkeleton(),
+                  )
+                : errorMessage != null
+                ? _ActivityPlaceholder(message: errorMessage)
+                : visibleItems.isEmpty
+                ? const _ActivityPlaceholder(message: 'No activity found yet')
+                : ListView.separated(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    itemCount: visibleItems.length,
+                    separatorBuilder: (_, int index) =>
+                        const SizedBox(height: 16),
+                    itemBuilder: (BuildContext context, int index) {
+                      return ActivityCard(
+                        item: visibleItems[index],
+                        useDetailsRoute: useDetailsRoute,
+                      );
+                    },
+                  ),
           ),
         ],
       );
@@ -101,6 +130,55 @@ class ActivityScreen extends StatelessWidget {
       title: title,
       showBack: showBack,
       child: content,
+    );
+  }
+}
+
+class _ActivityCardSkeleton extends StatelessWidget {
+  const _ActivityCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              AppShimmerBox(width: 78, height: 78),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    AppShimmerBox(width: 170, height: 16),
+                    SizedBox(height: 8),
+                    AppShimmerBox(width: 120, height: 12),
+                    SizedBox(height: 8),
+                    AppShimmerBox(width: 200, height: 12),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 14),
+          AppShimmerBox(width: double.infinity, height: 12),
+          SizedBox(height: 8),
+          AppShimmerBox(width: 180, height: 12),
+        ],
+      ),
     );
   }
 }
@@ -122,12 +200,16 @@ class _BookingTab extends StatelessWidget {
       onTap: onTap,
       child: Column(
         children: <Widget>[
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: const Color(0xFF1D2A36),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: const Color(0xFF1D2A36),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -150,6 +232,30 @@ class _BookingTab extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActivityPlaceholder extends StatelessWidget {
+  const _ActivityPlaceholder({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 24),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Color(0xFF6A7B8C),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }

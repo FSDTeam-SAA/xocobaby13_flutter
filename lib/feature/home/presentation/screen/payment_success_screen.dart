@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 
 class PaymentSuccessScreen extends StatefulWidget {
@@ -33,7 +34,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
               child: Row(
                 children: <Widget>[
                   GestureDetector(
-                    onTap: () => context.pop(),
+                    onTap: () => context.safePop(),
                     child: const Icon(
                       CupertinoIcons.back,
                       color: Color(0xFF1D2A36),

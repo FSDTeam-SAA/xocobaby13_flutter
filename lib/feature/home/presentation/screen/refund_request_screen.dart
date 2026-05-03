@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 import 'package:xocobaby13/feature/navigation/presentation/routes/navigation_routes.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
@@ -19,7 +20,7 @@ class RefundRequestScreen extends StatelessWidget {
               child: Row(
                 children: <Widget>[
                   GestureDetector(
-                    onTap: () => context.pop(),
+                    onTap: () => context.safePop(),
                     child: const Icon(
                       CupertinoIcons.back,
                       size: 18,

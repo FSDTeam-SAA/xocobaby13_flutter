@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 
 class SpotOwnerAnalyticsScreen extends StatelessWidget {
   const SpotOwnerAnalyticsScreen({super.key});
@@ -55,7 +55,7 @@ class SpotOwnerAnalyticsScreen extends StatelessWidget {
                 Row(
                   children: <Widget>[
                     GestureDetector(
-                      onTap: () => context.pop(),
+                      onTap: () => context.safePop(),
                       child: const Icon(
                         CupertinoIcons.back,
                         size: 20,

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 
@@ -128,7 +129,7 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
                 Row(
                   children: <Widget>[
                     GestureDetector(
-                      onTap: () => context.pop(),
+                      onTap: () => context.safePop(),
                       child: Container(
                         width: 46,
                         height: 46,

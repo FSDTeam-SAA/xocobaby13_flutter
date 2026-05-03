@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/core/common/widget/loading/app_shimmer.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
 import 'package:xocobaby13/feature/spot_owner/presentation/routes/spot_owner_routes.dart';
@@ -258,8 +259,10 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
                     children: <Widget>[
                       const Text(
                         'Good Morning',
-                        style:
-                            TextStyle(fontSize: 14, color: Color(0xFF3A4A5A)),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF3A4A5A),
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -280,17 +283,21 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
                         _loadUnreadCount();
                       }
                     },
-                    child: _SpotOwnerNotificationBell(unreadCount: _unreadCount),
+                    child: _SpotOwnerNotificationBell(
+                      unreadCount: _unreadCount,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 22),
-            _SpotOwnerSummaryCard(
-              title: 'Total Earnings',
-              value: _totalEarnings,
-              changeText: '$_earningsChange ',
-            ),
+            _isLoadingEarnings
+                ? const _SpotOwnerSummaryCardSkeleton()
+                : _SpotOwnerSummaryCard(
+                    title: 'Total Earnings',
+                    value: _totalEarnings,
+                    changeText: '$_earningsChange ',
+                  ),
             const SizedBox(height: 22),
             const Text(
               'Quick Actions',
@@ -317,7 +324,13 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
             ),
             const SizedBox(height: 14),
             if (_isLoadingEvents)
-              const Center(child: CircularProgressIndicator())
+              const Column(
+                children: <Widget>[
+                  _SpotOwnerEventCardSkeleton(),
+                  SizedBox(height: 14),
+                  _SpotOwnerEventCardSkeleton(),
+                ],
+              )
             else if (_eventsError != null)
               Text(
                 _eventsError ?? 'Failed to load events',
@@ -350,6 +363,86 @@ class _SpotOwnerHomeScreenState extends State<SpotOwnerHomeScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SpotOwnerSummaryCardSkeleton extends StatelessWidget {
+  const _SpotOwnerSummaryCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE0ECF8), width: 1.4),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: const Row(
+        children: <Widget>[
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              AppShimmerBox(width: 120, height: 14),
+              SizedBox(height: 12),
+              AppShimmerBox(width: 130, height: 28),
+            ],
+          ),
+          Spacer(),
+          AppShimmerBox(width: 72, height: 18),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpotOwnerEventCardSkeleton extends StatelessWidget {
+  const _SpotOwnerEventCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const Row(
+        children: <Widget>[
+          AppShimmerBox(width: 84, height: 84),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AppShimmerBox(width: 160, height: 16),
+                SizedBox(height: 8),
+                AppShimmerBox(width: 130, height: 12),
+                SizedBox(height: 8),
+                AppShimmerBox(width: 190, height: 12),
+                SizedBox(height: 12),
+                AppShimmerBox(width: 92, height: 30),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

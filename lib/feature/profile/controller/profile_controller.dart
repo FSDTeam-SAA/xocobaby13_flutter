@@ -159,17 +159,19 @@ class ProfileController extends GetxController {
     final String location = _formatLocation(spot['location']);
     final int price = _readInt(spot['price'] ?? booking['totalAmount']);
     final String? spotId = spot['_id']?.toString();
+    final double rating = _readDouble(spot['ratingAvg']);
+    final int reviewsCount = _readInt(spot['ratingCount']);
 
     return ActivityItemModel(
       title: title,
       dateLabel: dateLabel,
-      rating: 0,
+      rating: rating,
       status: status,
       imagePath: imagePath,
       timeRange: timeRange,
       location: location,
       ownerName: ownerName,
-      reviewsCount: 0,
+      reviewsCount: reviewsCount,
       pricePerDay: price,
       spotId: spotId,
       bookingId: bookingId,
@@ -251,6 +253,12 @@ class ProfileController extends GetxController {
     if (value is int) return value;
     if (value is num) return value.round();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double _readDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   String? _readObjectId(dynamic value) {

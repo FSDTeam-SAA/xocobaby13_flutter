@@ -1,6 +1,7 @@
 import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
 import 'package:xocobaby13/feature/search/presentation/routes/search_routes.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
+import 'package:xocobaby13/core/common/widget/loading/app_shimmer.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/model/user_profile_data_model.dart';
 
@@ -33,8 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _defaultNearbyLat = 23.8103;
   static const double _defaultNearbyLng = 90.4125;
   static const double _defaultNearbyDistanceKm = 15;
-  final double _nearbyLat = _defaultNearbyLat;
-  final double _nearbyLng = _defaultNearbyLng;
+  double _nearbyLat = _defaultNearbyLat;
+  double _nearbyLng = _defaultNearbyLng;
   final double _nearbyDistanceKm = _defaultNearbyDistanceKm;
   static const List<String> _defaultAttendees = <String>[
     'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
@@ -72,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _liveController = PageController();
     _liveBookingController = LiveBookingController.instance();
     _liveBookingController.loadLiveBookings();
-    _loadNearbySpots();
+    _resolveNearbyLocationAndLoad();
     _loadRecommendedSpots();
     _loadUnreadCount();
   }
@@ -85,6 +87,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _handleLiveStatusTap(int index) {
     _liveBookingController.toggleArrivalAt(index);
+  }
+
+  Future<void> _resolveNearbyLocationAndLoad() async {
+    try {
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await _loadNearbySpots();
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        await _loadNearbySpots();
+        return;
+      }
+
+      final Position position = await Geolocator.getCurrentPosition();
+      if (!mounted) return;
+      setState(() {
+        _nearbyLat = position.latitude;
+        _nearbyLng = position.longitude;
+      });
+    } catch (_) {
+      // Fall back to default coordinates when location is unavailable.
+    }
+
+    await _loadNearbySpots();
   }
 
   Future<void> _loadNearbySpots() async {
@@ -202,7 +236,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final int reviews = _readInt(spot['ratingCount']);
     final int pricePerDay = _readInt(spot['price']);
     final String imageUrl = _pickImageUrl(spot['images']);
-    final List<String> tags = _readStringList(spot['features']);
+    final List<String> tags = _readStringList(
+      spot['facilities'] ?? spot['features'],
+    );
     final List<double> coords = _readCoordinates(spot['location']);
     final String? spotId = spot['_id']?.toString();
 
@@ -429,7 +465,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SizedBox(
                     height: 126,
                     child: isLoading
-                        ? const Center(child: CircularProgressIndicator())
+                        ? const _LiveEventCardSkeleton()
                         : liveError != null
                         ? Center(
                             child: Column(
@@ -503,7 +539,12 @@ class _HomeScreenState extends State<HomeScreen> {
             SizedBox(
               height: 460,
               child: _isLoadingNearby
-                  ? const Center(child: CircularProgressIndicator())
+                  ? ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: 2,
+                      separatorBuilder: (_, __) => const SizedBox(width: 18),
+                      itemBuilder: (_, __) => const _PopularCardSkeleton(),
+                    )
                   : _nearbyError != null
                   ? Center(
                       child: Column(
@@ -573,7 +614,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 14),
             if (_isLoadingRecommended)
-              const Center(child: CircularProgressIndicator())
+              const Column(
+                children: <Widget>[
+                  _RecommendedCardSkeleton(),
+                  SizedBox(height: 14),
+                  _RecommendedCardSkeleton(),
+                ],
+              )
             else if (_recommendedError != null)
               Center(
                 child: Column(
@@ -978,6 +1025,77 @@ class _LiveEventCard extends StatelessWidget {
   }
 }
 
+class _LiveEventCardSkeleton extends StatelessWidget {
+  const _LiveEventCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 118,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0ECF8), width: 1.2),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: const <Widget>[
+          AppShimmerBox(
+            width: 125,
+            height: double.infinity,
+            borderRadius: BorderRadius.horizontal(left: Radius.circular(16)),
+          ),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(12, 10, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  AppShimmerBox(width: 120, height: 14),
+                  SizedBox(height: 8),
+                  AppShimmerBox(width: 100, height: 10),
+                  SizedBox(height: 6),
+                  AppShimmerBox(width: 150, height: 10),
+                  Spacer(),
+                  Row(
+                    children: <Widget>[
+                      AppShimmerBox(
+                        width: 24,
+                        height: 24,
+                        shape: BoxShape.circle,
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            AppShimmerBox(width: 90, height: 10),
+                            SizedBox(height: 6),
+                            AppShimmerBox(width: 110, height: 10),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      AppShimmerBox(width: 72, height: 28),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _LiveMetaRow extends StatelessWidget {
   final IconData icon;
   final String text;
@@ -1285,6 +1403,86 @@ class _PopularCard extends StatelessWidget {
   }
 }
 
+class _PopularCardSkeleton extends StatelessWidget {
+  const _PopularCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 300,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x1A0F172A),
+            blurRadius: 22,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          AppShimmerBox(
+            height: 180,
+            width: double.infinity,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(14, 10, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(child: AppShimmerBox(height: 18)),
+                    SizedBox(width: 12),
+                    AppShimmerBox(width: 88, height: 38),
+                  ],
+                ),
+                SizedBox(height: 10),
+                AppShimmerBox(width: 170, height: 12),
+                SizedBox(height: 8),
+                AppShimmerBox(width: 140, height: 12),
+                SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    AppShimmerBox(width: 68, height: 28),
+                    AppShimmerBox(width: 78, height: 28),
+                    AppShimmerBox(width: 60, height: 28),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    AppShimmerBox(width: 110, height: 32),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          AppShimmerBox(width: 90, height: 12),
+                          SizedBox(height: 6),
+                          AppShimmerBox(width: 130, height: 12),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                AppShimmerBox(height: 34, width: double.infinity),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AvatarStack extends StatelessWidget {
   final List<String> avatars;
 
@@ -1498,6 +1696,47 @@ class _RecommendedCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RecommendedCardSkeleton extends StatelessWidget {
+  const _RecommendedCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const Row(
+        children: <Widget>[
+          AppShimmerBox(width: 64, height: 64),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AppShimmerBox(width: 150, height: 14),
+                SizedBox(height: 8),
+                AppShimmerBox(width: 180, height: 11),
+                SizedBox(height: 8),
+                AppShimmerBox(width: 140, height: 11),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

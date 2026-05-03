@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/model/user_profile_data_model.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_avatar.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_style.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/profile_text_field.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
+import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 
 class PersonalDetailsScreen extends StatefulWidget {
   const PersonalDetailsScreen({super.key});
@@ -86,7 +86,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
 
     if (!mounted) return;
     if (success) {
-      context.pop();
+      context.safePop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Personal details updated.'),

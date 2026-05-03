@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
 import 'package:xocobaby13/feature/profile/presentation/routes/spot_owner_profile_routes.dart';
 import 'package:xocobaby13/feature/profile/presentation/screen/fisherman_logout_screen.dart';
-import 'package:xocobaby13/feature/profile/presentation/widgets/activity_card.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_avatar.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_profile_style.dart';
 import 'package:xocobaby13/feature/profile/presentation/widgets/spot_owner_settings_menu_tile.dart';
@@ -54,7 +53,7 @@ class SpotOwnerProfileMenuContent extends StatelessWidget {
           const SizedBox(height: 12),
           SpotOwnerSettingsMenuTile(
             icon: Icons.credit_card_outlined,
-            title: 'Link Bank Account',
+            title: 'Connect Stripe',
             onTap: () =>
                 context.push(SpotOwnerProfileRouteNames.linkBankAccount),
           ),
