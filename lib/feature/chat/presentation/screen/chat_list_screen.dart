@@ -10,6 +10,7 @@ import 'package:xocobaby13/feature/chat/presentation/widgets/chat_search_field.d
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_style.dart';
 import 'package:xocobaby13/feature/chat/presentation/widgets/chat_thread_tile.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
+import 'package:xocobaby13/core/common/widget/loading/app_shimmer.dart';
 
 class ChatListScreen extends StatefulWidget {
   final Color backgroundColor;
@@ -188,7 +189,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   const SizedBox(height: 14),
                   Expanded(
                     child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
+                        ? ListView.separated(
+                            padding: const EdgeInsets.only(bottom: 120),
+                            itemCount: 7,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (_, __) =>
+                                const _ChatThreadTileSkeleton(),
+                          )
                         : _loadError != null
                         ? Center(
                             child: Text(
@@ -239,6 +247,36 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ChatThreadTileSkeleton extends StatelessWidget {
+  const _ChatThreadTileSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          AppShimmerBox(width: 44, height: 44, shape: BoxShape.circle),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AppShimmerBox(width: 120, height: 16),
+                SizedBox(height: 8),
+                AppShimmerBox(width: double.infinity, height: 14),
+              ],
+            ),
+          ),
+          SizedBox(width: 8),
+          AppShimmerBox(width: 42, height: 12),
+        ],
       ),
     );
   }

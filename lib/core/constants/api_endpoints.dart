@@ -136,6 +136,9 @@ base class ApiEndpoints {
   static String getAllBookingsForARide(String rideId) =>
       _Booking.getAllBookingsForARide(rideId);
   static const String getMyBookings = _Booking.getMyBookings;
+  static const String getLiveBookings = _Booking.getLiveBookings;
+  static String bookingArrived(String id) => _Booking.bookingArrived(id);
+  static String bookingCheckout(String id) => _Booking.bookingCheckout(id);
 
   // ---------------------- Message -----------------------------
   /// ### Get
@@ -197,9 +200,9 @@ class _RemoteServer {
 
 class _LocalHostWifi {
   static const String socketUrl = 'http://localhost:5000';
-  static const String baseUrl = 'http://localhost:5000/api/v1';
-  // static const String baseUrl =
-  //     'https://backend-xocobaby-rf6o.onrender.com/api/v1';
+  // static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl =
+      'https://backend-xocobaby-rf6o.onrender.com/api/v1';
 }
 
 class _Auth {
@@ -328,6 +331,9 @@ class _Booking {
   static const String _bookingRoute = '${ApiEndpoints.baseUrl}/bookings';
   static const String createBooking = _bookingRoute;
   static const String getMyBookings = "$_bookingRoute/my";
+  static const String getLiveBookings = "$_bookingRoute/live";
+  static String bookingArrived(String id) => "$_bookingRoute/$id/arrived";
+  static String bookingCheckout(String id) => "$_bookingRoute/$id/checkout";
   static String getAllBookingsForARide(String rideId) =>
       "$_bookingRoute/ride/$rideId";
 }

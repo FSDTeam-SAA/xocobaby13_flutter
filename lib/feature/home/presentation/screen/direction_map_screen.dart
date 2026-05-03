@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
@@ -25,10 +27,15 @@ class DirectionMapScreen extends StatefulWidget {
 }
 
 class _DirectionMapScreenState extends State<DirectionMapScreen> {
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
   LatLng? _currentLocation;
   bool _isResolvingLocation = true;
   String? _locationError;
+  bool _isLoadingRoute = false;
+  String? _routeError;
+  List<LatLng> _routePoints = const <LatLng>[];
+  String? _routeDistanceText;
+  String? _routeDurationText;
 
   LatLng? get _destination {
     final double? lat = widget.lat;
@@ -48,6 +55,10 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
   }
 
   String get _distanceLabel {
+    if (_routeDistanceText != null && _routeDistanceText!.isNotEmpty) {
+      return _routeDistanceText!;
+    }
+
     final LatLng? destination = _destination;
     final LatLng? currentLocation = _currentLocation;
     if (destination == null || currentLocation == null) return '--';
@@ -66,6 +77,16 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
         ? '${kilometers.toStringAsFixed(0)} km'
         : '${kilometers.toStringAsFixed(1)} km';
   }
+
+  String get _etaLabel {
+    if (_routeDurationText != null && _routeDurationText!.isNotEmpty) {
+      return _routeDurationText!;
+    }
+    if (_isLoadingRoute) return 'Loading...';
+    return 'Open in Maps';
+  }
+
+  LatLng get _initialCenter => _destination ?? const LatLng(23.8103, 90.4125);
 
   @override
   void initState() {
@@ -107,7 +128,7 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
         _isResolvingLocation = false;
         _locationError = null;
       });
-      _updateCamera();
+      await _loadRoutePreview();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -118,33 +139,149 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
     }
   }
 
-  LatLngBounds _boundsFromPoints(List<LatLng> points) {
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-
-    for (final LatLng point in points.skip(1)) {
-      if (point.latitude < minLat) minLat = point.latitude;
-      if (point.latitude > maxLat) maxLat = point.latitude;
-      if (point.longitude < minLng) minLng = point.longitude;
-      if (point.longitude > maxLng) maxLng = point.longitude;
+  Future<void> _loadRoutePreview() async {
+    final LatLng? destination = _destination;
+    final LatLng? currentLocation = _currentLocation;
+    if (destination == null || currentLocation == null) {
+      _updateCamera();
+      return;
     }
 
-    return LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
-    );
+    setState(() {
+      _isLoadingRoute = true;
+      _routeError = null;
+      _routePoints = const <LatLng>[];
+      _routeDistanceText = null;
+      _routeDurationText = null;
+    });
+
+    try {
+      final Response<dynamic> response = await Dio().get(
+        'https://router.project-osrm.org/route/v1/driving/'
+        '${currentLocation.longitude},${currentLocation.latitude};'
+        '${destination.longitude},${destination.latitude}',
+        queryParameters: <String, dynamic>{
+          'overview': 'full',
+          'geometries': 'geojson',
+          'steps': false,
+        },
+      );
+
+      final Map<String, dynamic> data = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final List<dynamic> routes = data['routes'] is List
+          ? List<dynamic>.from(data['routes'] as List)
+          : const <dynamic>[];
+
+      if (routes.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _isLoadingRoute = false;
+          _routeError = 'Road route preview is unavailable right now';
+        });
+        _updateCamera();
+        return;
+      }
+
+      final Map<String, dynamic> route = Map<String, dynamic>.from(
+        routes.first as Map,
+      );
+      final Map<String, dynamic> geometry = route['geometry'] is Map
+          ? Map<String, dynamic>.from(route['geometry'] as Map)
+          : <String, dynamic>{};
+      final List<dynamic> coordinates = geometry['coordinates'] is List
+          ? List<dynamic>.from(geometry['coordinates'] as List)
+          : const <dynamic>[];
+
+      final List<LatLng> routePoints = <LatLng>[];
+      for (final dynamic coordinate in coordinates) {
+        if (coordinate is List && coordinate.length >= 2) {
+          final double? longitude = double.tryParse(coordinate[0].toString());
+          final double? latitude = double.tryParse(coordinate[1].toString());
+          if (latitude != null && longitude != null) {
+            routePoints.add(LatLng(latitude, longitude));
+          }
+        }
+      }
+
+      final double distanceMeters = _readDouble(route['distance']);
+      final double durationSeconds = _readDouble(route['duration']);
+
+      if (!mounted) return;
+      setState(() {
+        _isLoadingRoute = false;
+        _routePoints = routePoints;
+        _routeDistanceText = _formatDistance(distanceMeters);
+        _routeDurationText = _formatDuration(durationSeconds);
+        _routeError = routePoints.length >= 2
+            ? null
+            : 'Road route preview is unavailable right now';
+      });
+      _updateCamera();
+    } on DioException catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingRoute = false;
+        _routeError = 'Unable to load road route preview';
+      });
+      _updateCamera();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingRoute = false;
+        _routeError = 'Unable to load road route preview';
+      });
+      _updateCamera();
+    }
+  }
+
+  double _readDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  String _formatDistance(double meters) {
+    if (meters <= 0) return '--';
+    if (meters < 1000) return '${meters.round()} m';
+    final double kilometers = meters / 1000;
+    return kilometers >= 10
+        ? '${kilometers.toStringAsFixed(0)} km'
+        : '${kilometers.toStringAsFixed(1)} km';
+  }
+
+  String _formatDuration(double seconds) {
+    if (seconds <= 0) return 'Open in Maps';
+    final Duration duration = Duration(seconds: seconds.round());
+    if (duration.inMinutes < 60) {
+      return '${duration.inMinutes} min';
+    }
+    final int hours = duration.inHours;
+    final int minutes = duration.inMinutes.remainder(60);
+    if (minutes == 0) return '${hours}h';
+    return '${hours}h ${minutes}m';
   }
 
   void _updateCamera() {
-    final GoogleMapController? controller = _mapController;
     final LatLng? destination = _destination;
-    if (controller == null || destination == null) return;
+    if (destination == null) return;
+
+    if (_routePoints.length >= 2) {
+      final LatLngBounds bounds = LatLngBounds.fromPoints(_routePoints);
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: bounds,
+          padding: const EdgeInsets.fromLTRB(40, 120, 40, 220),
+          maxZoom: 15,
+        ),
+      );
+      return;
+    }
 
     final LatLng? currentLocation = _currentLocation;
     if (currentLocation == null) {
-      controller.animateCamera(CameraUpdate.newLatLngZoom(destination, 15));
+      _mapController.move(destination, 15);
       return;
     }
 
@@ -154,18 +291,25 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
       destination.latitude,
       destination.longitude,
     );
-
     if (meters > 50000) {
-      controller.animateCamera(CameraUpdate.newLatLngZoom(destination, 15));
+      _mapController.move(destination, 15);
       return;
     }
 
-    controller.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        _boundsFromPoints(<LatLng>[currentLocation, destination]),
-        56,
-      ),
+    final LatLng center = LatLng(
+      (currentLocation.latitude + destination.latitude) / 2,
+      (currentLocation.longitude + destination.longitude) / 2,
     );
+    final double zoom = meters > 15000
+        ? 10.5
+        : meters > 7000
+        ? 11.5
+        : meters > 3000
+        ? 12.5
+        : meters > 1500
+        ? 13.5
+        : 14.5;
+    _mapController.move(center, zoom);
   }
 
   Future<void> _startNavigation() async {
@@ -210,61 +354,74 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
   @override
   Widget build(BuildContext context) {
     final LatLng? destination = _destination;
-    final CameraPosition initialCameraPosition = CameraPosition(
-      target: destination ?? const LatLng(23.8103, 90.4125),
-      zoom: destination == null ? 9 : 15,
-    );
-
-    final Set<Marker> markers = <Marker>{
-      if (destination != null)
-        Marker(
-          markerId: const MarkerId('destination'),
-          position: destination,
-          infoWindow: InfoWindow(title: _title),
-        ),
-      if (_currentLocation != null)
-        Marker(
-          markerId: const MarkerId('current'),
-          position: _currentLocation!,
-          infoWindow: const InfoWindow(title: 'Your Location'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueAzure,
-          ),
-        ),
-    };
-    final Set<Polyline> polylines = <Polyline>{
-      if (_currentLocation != null && destination != null)
-        Polyline(
-          polylineId: const PolylineId('preview_line'),
-          color: const Color(0xFF1787CF),
-          width: 5,
-          startCap: Cap.roundCap,
-          endCap: Cap.roundCap,
-          jointType: JointType.round,
-          points: <LatLng>[_currentLocation!, destination],
-        ),
-    };
+    final List<LatLng> linePoints = _routePoints.isNotEmpty
+        ? _routePoints
+        : <LatLng>[
+            if (_currentLocation case final LatLng currentLocationPoint)
+              currentLocationPoint,
+            if (destination case final LatLng destinationPoint)
+              destinationPoint,
+          ];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F9FF),
       body: SafeArea(
         child: Stack(
           children: <Widget>[
-            GoogleMap(
-              initialCameraPosition: initialCameraPosition,
-              onMapCreated: (GoogleMapController controller) {
-                _mapController = controller;
-                _updateCamera();
-              },
-              mapType: MapType.normal,
-              myLocationEnabled: _currentLocation != null,
-              myLocationButtonEnabled: _currentLocation != null,
-              buildingsEnabled: true,
-              trafficEnabled: false,
-              zoomControlsEnabled: false,
-              compassEnabled: false,
-              markers: markers,
-              polylines: polylines,
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _initialCenter,
+                initialZoom: destination == null ? 9 : 15,
+                onMapReady: _updateCamera,
+              ),
+              children: <Widget>[
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.xocobaby13',
+                ),
+                if (linePoints.length >= 2)
+                  PolylineLayer(
+                    polylines: <Polyline<LatLng>>[
+                      Polyline<LatLng>(
+                        points: linePoints,
+                        strokeWidth: 5,
+                        color: const Color(0xFF1787CF),
+                      ),
+                    ],
+                  ),
+                MarkerLayer(
+                  markers: <Marker>[
+                    if (destination case final LatLng destinationPoint)
+                      Marker(
+                        point: destinationPoint,
+                        width: 42,
+                        height: 52,
+                        child: const _MapPin(color: Color(0xFFFF3B30)),
+                      ),
+                    if (_currentLocation case final LatLng currentLocationPoint)
+                      Marker(
+                        point: currentLocationPoint,
+                        width: 20,
+                        height: 20,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1787CF),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                            boxShadow: const <BoxShadow>[
+                              BoxShadow(
+                                color: Color(0x26000000),
+                                blurRadius: 8,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
             Positioned(
               top: 12,
@@ -349,14 +506,22 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
                         color: Color(0xFF6A7B8C),
                       ),
                     ),
+                    if (_routeError != null) ...<Widget>[
+                      const SizedBox(height: 8),
+                      Text(
+                        _routeError!,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFFE23A3A),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Row(
                       children: <Widget>[
-                        const Expanded(
-                          child: _DirectionInfo(
-                            title: 'ETA',
-                            value: 'Open in Maps',
-                          ),
+                        Expanded(
+                          child: _DirectionInfo(title: 'ETA', value: _etaLabel),
                         ),
                         const SizedBox(width: 18),
                         Expanded(
@@ -445,5 +610,16 @@ class _DirectionInfo extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _MapPin extends StatelessWidget {
+  const _MapPin({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(Icons.location_on, color: color, size: 42);
   }
 }

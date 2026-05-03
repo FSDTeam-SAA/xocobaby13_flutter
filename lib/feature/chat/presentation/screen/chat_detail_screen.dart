@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
+import 'package:xocobaby13/core/common/widget/loading/app_shimmer.dart';
 import 'package:xocobaby13/feature/chat/model/chat_api_mapper.dart';
 import 'package:xocobaby13/feature/chat/model/chat_message_model.dart';
 import 'package:xocobaby13/feature/chat/model/chat_thread_model.dart';
@@ -881,7 +882,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             const Divider(height: 1, color: ChatPalette.divider),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const _ChatConversationSkeleton()
                   : _loadError != null
                   ? Center(
                       child: Text(
@@ -928,6 +929,59 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               isSending: _isSending,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatConversationSkeleton extends StatelessWidget {
+  const _ChatConversationSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      children: const <Widget>[
+        _ChatBubbleSkeleton(isMe: false, width: 170),
+        SizedBox(height: 12),
+        _ChatBubbleSkeleton(isMe: true, width: 130),
+        SizedBox(height: 12),
+        _ChatBubbleSkeleton(isMe: false, width: 210),
+        SizedBox(height: 12),
+        _ChatBubbleSkeleton(isMe: true, width: 160),
+        SizedBox(height: 12),
+        _ChatBubbleSkeleton(isMe: false, width: 145),
+      ],
+    );
+  }
+}
+
+class _ChatBubbleSkeleton extends StatelessWidget {
+  const _ChatBubbleSkeleton({required this.isMe, required this.width});
+
+  final bool isMe;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final BorderRadius radius = BorderRadius.only(
+      topLeft: const Radius.circular(16),
+      topRight: const Radius.circular(16),
+      bottomLeft: Radius.circular(isMe ? 16 : 6),
+      bottomRight: Radius.circular(isMe ? 6 : 16),
+    );
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: AppShimmer(
+        child: Container(
+          width: width,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isMe ? ChatPalette.outgoingBubble : const Color(0xFF5CB4EA),
+            borderRadius: radius,
+          ),
         ),
       ),
     );

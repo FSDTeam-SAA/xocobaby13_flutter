@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _unreadCount = 0;
   static const double _defaultNearbyLat = 23.8103;
   static const double _defaultNearbyLng = 90.4125;
-  static const double _defaultNearbyDistanceKm = 15;
+  static const double _defaultNearbyDistanceKm = 100;
   double _nearbyLat = _defaultNearbyLat;
   double _nearbyLng = _defaultNearbyLng;
   final double _nearbyDistanceKm = _defaultNearbyDistanceKm;
@@ -108,14 +108,16 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final Position position = await Geolocator.getCurrentPosition();
+      final Position position = await Geolocator.getCurrentPosition().timeout(
+        const Duration(seconds: 8),
+      );
       if (!mounted) return;
       setState(() {
         _nearbyLat = position.latitude;
         _nearbyLng = position.longitude;
       });
     } catch (_) {
-      // Fall back to default coordinates when location is unavailable.
+      // Fall back to default coordinates when location is unavailable or timed out.
     }
 
     await _loadNearbySpots();
@@ -492,12 +494,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             controller: _liveController,
                             itemCount: liveEvents.length,
                             itemBuilder: (BuildContext context, int index) {
+                              final LiveBookingItem liveEvent =
+                                  liveEvents[index];
+                              final String liveEventId =
+                                  liveEvent.id?.trim() ?? '';
                               return AnimatedBuilder(
                                 animation: _liveController,
                                 child: _LiveEventCard(
-                                  data: liveEvents[index],
+                                  data: liveEvent,
                                   onStatusTap: () =>
                                       _handleLiveStatusTap(index),
+                                  isActionLoading:
+                                      liveEventId.isNotEmpty &&
+                                      _liveBookingController.actionLoadingIds
+                                          .contains(liveEventId),
                                 ),
                                 builder: (BuildContext context, Widget? child) {
                                   double scale = 1;
@@ -656,6 +666,7 @@ class _HomeScreenState extends State<HomeScreen> {
             else
               Column(
                 children: recommendedPlaces
+                    .take(5)
                     .map(
                       (_RecommendedPlace place) => _RecommendedCard(
                         data: place,
@@ -865,13 +876,20 @@ class _SectionHeader extends StatelessWidget {
 class _LiveEventCard extends StatelessWidget {
   final LiveBookingItem data;
   final VoidCallback onStatusTap;
+  final bool isActionLoading;
 
-  const _LiveEventCard({required this.data, required this.onStatusTap});
+  const _LiveEventCard({
+    required this.data,
+    required this.onStatusTap,
+    required this.isActionLoading,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final String statusLabel = data.isArrived ? 'Check Out' : 'Arrive';
-    final Color statusColor = data.isArrived
+    final String statusLabel = data.statusLabel;
+    final Color statusColor = !data.canUpdateAttendance
+        ? const Color(0xFF94A3B8)
+        : data.isArrived
         ? const Color(0xFF111827)
         : const Color(0xFF1787CF);
     return Container(
@@ -992,16 +1010,24 @@ class _LiveEventCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      GestureDetector(
-                        onTap: onStatusTap,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            borderRadius: BorderRadius.circular(10),
+                      SizedBox(
+                        height: 32,
+                        child: AppElevatedButton(
+                          onPressed:
+                              isActionLoading || !data.canUpdateAttendance
+                              ? null
+                              : onStatusTap,
+                          loadingColor: Colors.white,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: statusColor,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           child: Text(
                             statusLabel,

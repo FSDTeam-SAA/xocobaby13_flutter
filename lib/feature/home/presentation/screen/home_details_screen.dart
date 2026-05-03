@@ -1,11 +1,10 @@
 import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
 import 'package:xocobaby13/core/common/widget/loading/app_shimmer.dart';
@@ -1024,10 +1023,7 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
         ((widget.lat != null && widget.lng != null)
             ? LatLng(widget.lat!, widget.lng!)
             : const LatLng(39.8283, -98.5795));
-    final CameraPosition mapCamera = CameraPosition(
-      target: mapCenter,
-      zoom: _zoomForDistance(widget.distanceKm),
-    );
+    final double mapZoom = _zoomForDistance(widget.distanceKm);
     final int bookedSlots = _readInt(spot?['bookedSlots']);
     final int availableSlots = _readInt(spot?['availableSlots']);
     final int totalSlots = _readInt(spot?['totalSlots']);
@@ -1035,9 +1031,6 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
       _bookingTimeRange,
       fallback: _firstAvailabilityLabel(spot?['availability']),
     );
-    final Set<Marker> mapMarkers = <Marker>{
-      Marker(markerId: const MarkerId('spot'), position: mapCenter),
-    };
 
     if (_isLoadingSpot && spot == null) {
       return const Scaffold(
@@ -1530,19 +1523,55 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                           child: SizedBox(
                             height: 240,
                             width: double.infinity,
-                            child: GoogleMap(
-                              initialCameraPosition: mapCamera,
-                              mapType: MapType.normal,
-                              myLocationEnabled: false,
-                              myLocationButtonEnabled: false,
-                              zoomControlsEnabled: false,
-                              markers: mapMarkers,
-                              gestureRecognizers:
-                                  <Factory<OneSequenceGestureRecognizer>>{
-                                    Factory<OneSequenceGestureRecognizer>(
-                                      () => EagerGestureRecognizer(),
+                            child: FlutterMap(
+                              options: MapOptions(
+                                initialCenter: mapCenter,
+                                initialZoom: mapZoom,
+                                interactionOptions: const InteractionOptions(
+                                  flags: InteractiveFlag.none,
+                                ),
+                                onTap: (tapPos, _) {
+                                  if (spotLatLng == null) {
+                                    _showMessage(
+                                      context,
+                                      'This spot does not have a saved map location yet',
+                                    );
+                                    return;
+                                  }
+                                  final Uri directionUri = Uri(
+                                    path: HomeRouteNames.direction,
+                                    queryParameters: <String, String>{
+                                      'title': title,
+                                      'address': locationLabel,
+                                      'lat': spotLatLng.latitude.toString(),
+                                      'lng': spotLatLng.longitude.toString(),
+                                    },
+                                  );
+                                  context.push(directionUri.toString());
+                                },
+                              ),
+                              children: <Widget>[
+                                TileLayer(
+                                  urlTemplate:
+                                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                  userAgentPackageName:
+                                      'com.example.xocobaby13',
+                                ),
+                                MarkerLayer(
+                                  markers: <Marker>[
+                                    Marker(
+                                      point: mapCenter,
+                                      width: 36,
+                                      height: 46,
+                                      child: const Icon(
+                                        Icons.location_pin,
+                                        color: Color(0xFFE23A3A),
+                                        size: 40,
+                                      ),
                                     ),
-                                  },
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -1605,21 +1634,6 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                               ),
                             ),
                           ),
-                        ),
-                        const Positioned(
-                          left: 12,
-                          top: 70,
-                          child: _MapPriceTag(label: r'$95'),
-                        ),
-                        const Positioned(
-                          right: 18,
-                          top: 120,
-                          child: _MapPriceTag(label: r'$150'),
-                        ),
-                        const Positioned(
-                          right: 8,
-                          bottom: 28,
-                          child: _MapPriceTag(label: r'$450'),
                         ),
                       ],
                     ),
@@ -1772,38 +1786,6 @@ class _TagWrap extends StatelessWidget {
             ),
           )
           .toList(),
-    );
-  }
-}
-
-class _MapPriceTag extends StatelessWidget {
-  final String label;
-
-  const _MapPriceTag({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E7CC8),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
-        ),
-      ),
     );
   }
 }

@@ -12,6 +12,7 @@ class LiveBookingController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxnString error = RxnString();
   final RxList<LiveBookingItem> events = <LiveBookingItem>[].obs;
+  final RxSet<String> actionLoadingIds = <String>{}.obs;
 
   static const List<String> _monthNames = <String>[
     'Jan',
@@ -43,29 +44,19 @@ class LiveBookingController extends GetxController {
 
     try {
       final response = await _appPigeon.get(
-        ApiEndpoints.getMyBookings,
+        ApiEndpoints.getLiveBookings,
         queryParameters: const <String, dynamic>{'limit': 100},
       );
-      final Map<String, dynamic> responseBody = response.data is Map
-          ? Map<String, dynamic>.from(response.data as Map)
-          : <String, dynamic>{};
-      final dynamic data = responseBody['data'];
-      final List<LiveBookingItem> bookings = <LiveBookingItem>[];
+      final List<LiveBookingItem> bookings = _extractLiveEvents(
+        response.data,
+        isUpcomingFallback: false,
+      );
 
-      if (data is List) {
-        for (final dynamic item in data) {
-          if (item is! Map) {
-            continue;
-          }
-          final Map<String, dynamic> booking = Map<String, dynamic>.from(item);
-          if (!_isLiveBooking(booking)) {
-            continue;
-          }
-          bookings.add(_mapBookingToLiveEvent(booking));
-        }
+      if (bookings.isNotEmpty) {
+        events.assignAll(bookings);
+      } else {
+        await _loadUpcomingFallbackBookings();
       }
-
-      events.assignAll(bookings);
     } catch (_) {
       error.value = 'Failed to load live bookings';
     } finally {
@@ -79,18 +70,46 @@ class LiveBookingController extends GetxController {
     }
   }
 
-  void toggleArrivalAt(int index) {
+  Future<void> toggleArrivalAt(int index) async {
     if (index < 0 || index >= events.length) {
       return;
     }
 
     final LiveBookingItem event = events[index];
-    if (!event.isArrived) {
-      events[index] = event.copyWith(isArrived: true);
+    final String bookingId = event.id?.trim() ?? '';
+    if (bookingId.isEmpty) {
+      error.value = 'Booking id is missing';
+      return;
+    }
+    if (!event.canUpdateAttendance) {
+      return;
+    }
+    if (actionLoadingIds.contains(bookingId)) {
       return;
     }
 
-    events.removeAt(index);
+    actionLoadingIds.add(bookingId);
+    actionLoadingIds.refresh();
+
+    try {
+      if (!event.isArrived) {
+        await _appPigeon.patch(ApiEndpoints.bookingArrived(bookingId));
+        events[index] = event.copyWith(
+          isArrived: true,
+          statusLabel: 'Check Out',
+        );
+      } else {
+        await _appPigeon.patch(ApiEndpoints.bookingCheckout(bookingId));
+        events.removeAt(index);
+      }
+    } catch (_) {
+      error.value = event.isArrived
+          ? 'Failed to check out booking'
+          : 'Failed to mark booking as arrived';
+    } finally {
+      actionLoadingIds.remove(bookingId);
+      actionLoadingIds.refresh();
+    }
   }
 
   bool _isLiveBooking(Map<String, dynamic> booking) {
@@ -119,7 +138,117 @@ class LiveBookingController extends GetxController {
     return paymentId.isNotEmpty;
   }
 
-  LiveBookingItem _mapBookingToLiveEvent(Map<String, dynamic> booking) {
+  bool _isDisplayableFallbackBooking(Map<String, dynamic> booking) {
+    final String status = _readString(booking['status']).toLowerCase();
+    final String paymentStatus = _readString(
+      booking['paymentStatus'],
+    ).toLowerCase();
+
+    if (status == 'cancelled' ||
+        status == 'canceled' ||
+        status == 'completed') {
+      return false;
+    }
+
+    if (paymentStatus == 'refunded' ||
+        paymentStatus == 'failed' ||
+        paymentStatus == 'cancelled' ||
+        paymentStatus == 'canceled') {
+      return false;
+    }
+
+    if (status != 'confirmed' && status != 'pending') {
+      return false;
+    }
+
+    final DateTime? bookingDate = _parseDate(booking['date']);
+    if (bookingDate == null) {
+      return false;
+    }
+
+    return !bookingDate.isBefore(_startOfToday());
+  }
+
+  Future<void> _loadUpcomingFallbackBookings() async {
+    final response = await _appPigeon.get(
+      ApiEndpoints.getMyBookings,
+      queryParameters: const <String, dynamic>{'limit': 100},
+    );
+
+    final List<Map<String, dynamic>> upcomingBookings =
+        _extractBookingMaps(
+            response.data,
+          ).where(_isDisplayableFallbackBooking).toList(growable: false)
+          ..sort((Map<String, dynamic> a, Map<String, dynamic> b) {
+            final DateTime? first = _parseDate(a['date']);
+            final DateTime? second = _parseDate(b['date']);
+            if (first == null && second == null) {
+              return 0;
+            }
+            if (first == null) {
+              return 1;
+            }
+            if (second == null) {
+              return -1;
+            }
+            return first.compareTo(second);
+          });
+
+    final List<LiveBookingItem> fallbackEvents = upcomingBookings
+        .map(
+          (Map<String, dynamic> booking) =>
+              _mapBookingToLiveEvent(booking, isUpcomingFallback: true),
+        )
+        .toList(growable: false);
+
+    events.assignAll(fallbackEvents);
+  }
+
+  List<LiveBookingItem> _extractLiveEvents(
+    dynamic rawResponse, {
+    required bool isUpcomingFallback,
+  }) {
+    final List<LiveBookingItem> bookings = <LiveBookingItem>[];
+
+    for (final Map<String, dynamic> booking in _extractBookingMaps(
+      rawResponse,
+    )) {
+      if (!_isLiveBooking(booking)) {
+        continue;
+      }
+      bookings.add(
+        _mapBookingToLiveEvent(booking, isUpcomingFallback: isUpcomingFallback),
+      );
+    }
+
+    return bookings;
+  }
+
+  List<Map<String, dynamic>> _extractBookingMaps(dynamic rawResponse) {
+    final Map<String, dynamic> responseBody = rawResponse is Map
+        ? Map<String, dynamic>.from(rawResponse)
+        : <String, dynamic>{};
+    final dynamic data = responseBody['data'];
+    final List<Map<String, dynamic>> bookings = <Map<String, dynamic>>[];
+
+    if (data is! List) {
+      return bookings;
+    }
+
+    for (final dynamic item in data) {
+      if (item is! Map) {
+        continue;
+      }
+      bookings.add(Map<String, dynamic>.from(item));
+    }
+
+    return bookings;
+  }
+
+  LiveBookingItem _mapBookingToLiveEvent(
+    Map<String, dynamic> booking, {
+    bool isUpcomingFallback = false,
+  }) {
     final Map<String, dynamic> spot = booking['spot'] is Map
         ? Map<String, dynamic>.from(booking['spot'])
         : <String, dynamic>{};
@@ -129,6 +258,9 @@ class LiveBookingController extends GetxController {
     final Map<String, dynamic> slot = booking['slot'] is Map
         ? Map<String, dynamic>.from(booking['slot'])
         : <String, dynamic>{};
+    final bool isArrived =
+        _readString(booking['attendanceStatus']).toLowerCase() == 'arrived';
+    final String bookingStatus = _readString(booking['status']).toLowerCase();
 
     return LiveBookingItem(
       id: booking['_id']?.toString(),
@@ -145,8 +277,33 @@ class LiveBookingController extends GetxController {
         owner['avatar'],
         fallback: _defaultHostAvatar,
       ),
-      isArrived: false,
+      statusLabel: isUpcomingFallback
+          ? bookingStatus == 'pending'
+                ? 'Pending'
+                : 'Upcoming'
+          : isArrived
+          ? 'Check Out'
+          : 'Arrive',
+      canUpdateAttendance: !isUpcomingFallback,
+      isArrived: isArrived,
     );
+  }
+
+  DateTime _startOfToday() {
+    final DateTime now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  DateTime? _parseDate(dynamic rawDate) {
+    final String date = _readString(rawDate);
+    if (date.isEmpty) {
+      return null;
+    }
+    final DateTime? parsed = DateTime.tryParse(date);
+    if (parsed == null) {
+      return null;
+    }
+    return DateTime(parsed.year, parsed.month, parsed.day);
   }
 
   String _resolveImageUrl(dynamic rawImage, {required String fallback}) {
@@ -263,6 +420,8 @@ class LiveBookingItem {
   final String imageUrl;
   final String hostAvatarUrl;
   final bool isArrived;
+  final String statusLabel;
+  final bool canUpdateAttendance;
 
   const LiveBookingItem({
     this.id,
@@ -276,9 +435,11 @@ class LiveBookingItem {
     required this.imageUrl,
     required this.hostAvatarUrl,
     required this.isArrived,
+    required this.statusLabel,
+    required this.canUpdateAttendance,
   });
 
-  LiveBookingItem copyWith({bool? isArrived}) {
+  LiveBookingItem copyWith({bool? isArrived, String? statusLabel}) {
     return LiveBookingItem(
       id: id,
       title: title,
@@ -291,6 +452,8 @@ class LiveBookingItem {
       imageUrl: imageUrl,
       hostAvatarUrl: hostAvatarUrl,
       isArrived: isArrived ?? this.isArrived,
+      statusLabel: statusLabel ?? this.statusLabel,
+      canUpdateAttendance: canUpdateAttendance,
     );
   }
 }
