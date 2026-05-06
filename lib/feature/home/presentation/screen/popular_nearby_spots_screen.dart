@@ -172,10 +172,17 @@ class _PopularNearbySpotsScreenState extends State<PopularNearbySpotsScreen> {
                 children: <Widget>[
                   GestureDetector(
                     onTap: () => context.safePop(),
-                    child: const Icon(
-                      CupertinoIcons.back,
-                      size: 20,
-                      color: Color(0xFF1D2A36),
+                    behavior: HitTestBehavior.opaque,
+                    child: const SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Center(
+                        child: Icon(
+                          CupertinoIcons.back,
+                          size: 20,
+                          color: Color(0xFF1D2A36),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),

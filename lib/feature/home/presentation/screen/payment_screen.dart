@@ -273,10 +273,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     children: <Widget>[
                       GestureDetector(
                         onTap: () => context.safePop(false),
-                        child: const Icon(
-                          CupertinoIcons.back,
-                          color: Color(0xFF1D2A36),
-                          size: 18,
+                        behavior: HitTestBehavior.opaque,
+                        child: const SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Center(
+                            child: Icon(
+                              CupertinoIcons.back,
+                              color: Color(0xFF1D2A36),
+                              size: 18,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),

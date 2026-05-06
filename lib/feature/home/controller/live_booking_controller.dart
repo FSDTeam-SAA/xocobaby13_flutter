@@ -309,19 +309,32 @@ class LiveBookingController extends GetxController {
   String _resolveImageUrl(dynamic rawImage, {required String fallback}) {
     if (rawImage is List) {
       for (final dynamic item in rawImage) {
-        final String image = _readString(item);
+        final String image = _extractImageValue(item);
         if (image.isNotEmpty) {
           return image;
         }
       }
     }
 
-    final String singleImage = _readString(rawImage);
+    final String singleImage = _extractImageValue(rawImage);
     if (singleImage.isNotEmpty) {
       return singleImage;
     }
 
     return fallback;
+  }
+
+  String _extractImageValue(dynamic rawImage) {
+    if (rawImage is Map) {
+      final Map<String, dynamic> image = Map<String, dynamic>.from(rawImage);
+      final String nestedUrl = _readString(
+        image['url'] ?? image['secure_url'] ?? image['imageUrl'],
+      );
+      if (nestedUrl.isNotEmpty) {
+        return nestedUrl;
+      }
+    }
+    return _readString(rawImage);
   }
 
   String _readLocation(Map<String, dynamic> spot) {
