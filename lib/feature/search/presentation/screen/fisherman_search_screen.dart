@@ -24,12 +24,9 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
 
   String _query = '';
   bool _isLoading = false;
+  bool _hasSearched = false;
   String? _error;
-
-  static const String _defaultCity = 'Dhaka';
-  static const int _defaultMinPrice = 500;
-  static const int _defaultMaxPrice = 2000;
-  static const List<String> _defaultFeatures = <String>['fishing', 'parking'];
+  int _activeSearchRequestId = 0;
 
   @override
   void dispose() {
@@ -46,37 +43,28 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
   }
 
   Future<void> _searchSpots() async {
-    if (_query.isEmpty) {
+    final String query = _query.trim();
+    if (query.isEmpty) {
       setState(() {
         _results.clear();
         _error = null;
         _isLoading = false;
+        _hasSearched = false;
       });
       return;
     }
-    if (_isLoading) return;
+    final int requestId = ++_activeSearchRequestId;
     setState(() {
       _isLoading = true;
       _error = null;
+      _hasSearched = true;
     });
     try {
-      final Map<String, dynamic> queryParams = <String, dynamic>{'q': _query};
-      if (_defaultCity.isNotEmpty) {
-        queryParams['city'] = _defaultCity;
-      }
-      if (_defaultMinPrice > 0) {
-        queryParams['minPrice'] = _defaultMinPrice;
-      }
-      if (_defaultMaxPrice > 0) {
-        queryParams['maxPrice'] = _defaultMaxPrice;
-      }
-      if (_defaultFeatures.isNotEmpty) {
-        queryParams['features'] = _defaultFeatures.join(',');
-      }
       final response = await Get.find<AuthorizedPigeon>().get(
         ApiEndpoints.searchSpots,
-        queryParameters: queryParams,
+        queryParameters: <String, dynamic>{'q': query},
       );
+      if (!mounted || requestId != _activeSearchRequestId) return;
       final responseBody = response.data is Map
           ? Map<String, dynamic>.from(response.data as Map)
           : <String, dynamic>{};
@@ -91,7 +79,6 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
           }
         }
       }
-      if (!mounted) return;
       setState(() {
         _results
           ..clear()
@@ -99,7 +86,7 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestId != _activeSearchRequestId) return;
       setState(() {
         _error = 'Failed to fetch search results';
         _isLoading = false;
@@ -155,8 +142,9 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
                     Expanded(
                       child: _SearchBar(
                         controller: _controller,
-                        hintText: 'Search for areas',
+                        hintText: 'Search spots, city, or address',
                         onChanged: _onQueryChanged,
+                        onSubmitted: (_) => _searchSpots(),
                       ),
                     ),
                   ],
@@ -184,6 +172,17 @@ class _FishermanSearchScreenState extends State<FishermanSearchScreen> {
                                 child: const Text('Retry'),
                               ),
                             ],
+                          ),
+                        )
+                      : !_hasSearched
+                      ? const Center(
+                          child: Text(
+                            'Search for spots by title, city, or address',
+                            style: TextStyle(
+                              color: Color(0xFF6A7B8C),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         )
                       : _results.isEmpty
@@ -237,11 +236,13 @@ class _SearchBar extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
 
   const _SearchBar({
     required this.controller,
     required this.hintText,
     required this.onChanged,
+    required this.onSubmitted,
   });
 
   @override
@@ -263,6 +264,8 @@ class _SearchBar extends StatelessWidget {
       child: TextField(
         controller: controller,
         onChanged: onChanged,
+        onSubmitted: onSubmitted,
+        textInputAction: TextInputAction.search,
         decoration: InputDecoration(
           prefixIcon: const Icon(
             CupertinoIcons.search,

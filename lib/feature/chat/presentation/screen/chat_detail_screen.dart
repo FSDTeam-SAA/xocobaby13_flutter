@@ -72,10 +72,28 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (text.isEmpty && _pendingImages.isEmpty) {
       return;
     }
+    final List<XFile> pendingImages = _pendingImages.length > 5
+        ? _pendingImages.take(5).toList()
+        : List<XFile>.from(_pendingImages);
+    final List<ChatMessageModel> optimisticMessages = _buildOptimisticMessages(
+      text,
+      pendingImages,
+    );
+    final List<String> optimisticIds = optimisticMessages
+        .map((ChatMessageModel message) => message.id)
+        .toList(growable: false);
     setState(() => _isSending = true);
+    if (optimisticMessages.isNotEmpty) {
+      _mergeMessages(optimisticMessages);
+    }
+    _composerController.clear();
+    if (_pendingImages.isNotEmpty) {
+      setState(() => _pendingImages.clear());
+    }
+    _scrollToBottom();
     try {
-      final response = _pendingImages.isNotEmpty
-          ? await _sendMultipartMessage(text)
+      final response = pendingImages.isNotEmpty
+          ? await _sendMultipartMessage(text, pendingImages)
           : await Get.find<AuthorizedPigeon>().post(
               ApiEndpoints.sendMessage,
               data: <String, dynamic>{'chatId': widget.thread.id, 'text': text},
@@ -88,16 +106,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ? ChatApiMapper.messagesFromList(data, _currentUserId)
           : <ChatMessageModel>[];
       if (!mounted) return;
+      _removeMessagesById(optimisticIds);
       if (newMessages.isNotEmpty) {
         _mergeMessages(newMessages);
-      }
-      _composerController.clear();
-      if (_pendingImages.isNotEmpty) {
-        _pendingImages.clear();
       }
       _scrollToBottom();
     } catch (e) {
       if (mounted) {
+        _removeMessagesById(optimisticIds);
+        if (_composerController.text.trim().isEmpty && text.isNotEmpty) {
+          _composerController.text = text;
+          _composerController.selection = TextSelection.fromPosition(
+            TextPosition(offset: _composerController.text.length),
+          );
+        }
+        if (_pendingImages.isEmpty && pendingImages.isNotEmpty) {
+          setState(() => _pendingImages.addAll(pendingImages));
+        }
         _showMessage('Failed to send message');
       }
     } finally {
@@ -159,7 +184,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           : <String, dynamic>{};
       final dynamic raw = authRecord?.toJson();
       final Map<String, dynamic> record = raw is Map
-          ? Map<String, dynamic>.from(raw as Map)
+          ? Map<String, dynamic>.from(raw)
           : <String, dynamic>{};
       return _pickFirstString(<dynamic>[
         data['id'],
@@ -268,6 +293,38 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     return <String, dynamic>{};
   }
 
+  List<ChatMessageModel> _buildOptimisticMessages(
+    String text,
+    List<XFile> pendingImages,
+  ) {
+    final DateTime now = DateTime.now();
+    final List<ChatMessageModel> messages = <ChatMessageModel>[];
+    if (text.isNotEmpty) {
+      messages.add(
+        ChatMessageModel(
+          id: 'local-text-${now.microsecondsSinceEpoch}',
+          text: text,
+          isMe: true,
+          timestamp: now,
+        ),
+      );
+    }
+    for (int index = 0; index < pendingImages.length; index++) {
+      final XFile file = pendingImages[index];
+      messages.add(
+        ChatMessageModel(
+          id: 'local-image-${now.microsecondsSinceEpoch}-$index',
+          text: text.isEmpty ? 'Photo' : text,
+          isMe: true,
+          timestamp: now.add(Duration(milliseconds: index + 1)),
+          type: 'image',
+          localPath: file.path,
+        ),
+      );
+    }
+    return messages;
+  }
+
   void _mergeMessages(List<ChatMessageModel> incoming) {
     if (incoming.isEmpty) return;
     final List<ChatMessageModel> updated = List<ChatMessageModel>.from(
@@ -288,6 +345,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void _removeMessage(String messageId) {
     final List<ChatMessageModel> updated = _messages
         .where((m) => m.id != messageId)
+        .toList();
+    setState(() => _messages = updated);
+  }
+
+  void _removeMessagesById(List<String> messageIds) {
+    if (messageIds.isEmpty) return;
+    final Set<String> ids = messageIds.toSet();
+    final List<ChatMessageModel> updated = _messages
+        .where((ChatMessageModel message) => !ids.contains(message.id))
         .toList();
     setState(() => _messages = updated);
   }
@@ -552,11 +618,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     });
   }
 
-  Future<dio.Response<dynamic>> _sendMultipartMessage(String text) async {
-    final List<XFile> filesToSend = _pendingImages.length > 5
-        ? _pendingImages.take(5).toList()
-        : List<XFile>.from(_pendingImages);
-    if (_pendingImages.length > 5) {
+  Future<dio.Response<dynamic>> _sendMultipartMessage(
+    String text,
+    List<XFile> pendingImages,
+  ) async {
+    final List<XFile> filesToSend = pendingImages.length > 5
+        ? pendingImages.take(5).toList()
+        : List<XFile>.from(pendingImages);
+    if (pendingImages.length > 5) {
       _showMessage('Only 5 images can be sent at a time');
     }
     final List<dio.MultipartFile> files = <dio.MultipartFile>[];

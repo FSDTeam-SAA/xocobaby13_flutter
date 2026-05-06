@@ -174,6 +174,7 @@ base class ApiEndpoints {
 
   // ---------------------- Spot -----------------------------
   /// ### get
+  static const String allSpots = _Spot.all;
   static const String nearbySpots = _Spot.nearby;
   static String spotById(String id) => _Spot.byId(id);
   static const String searchSpots = _Spot.search;
@@ -264,11 +265,12 @@ class _Notification {
 // ---------------------- Spot -----------------------------
 class _Spot {
   static const String _spotRoute = '${ApiEndpoints.baseUrl}/spot';
+  static const String all = _spotRoute;
   static const String nearby = '$_spotRoute/nearby';
   static String byId(String id) => '$_spotRoute/$id';
   static const String search = '$_spotRoute/search';
   static const String recommended = '$_spotRoute/recommended';
-  static const String create = '$_spotRoute';
+  static const String create = _spotRoute;
   static const String ownerSpots = '$_spotRoute/owner/my-spots';
 }
 

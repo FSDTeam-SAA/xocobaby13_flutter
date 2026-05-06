@@ -2,6 +2,7 @@ import 'package:xocobaby13/feature/home/presentation/screen/direction_map_screen
 import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/home/presentation/screen/home_details_screen.dart';
 import 'package:xocobaby13/feature/home/presentation/screen/payment_screen.dart';
+import 'package:xocobaby13/feature/home/presentation/screen/popular_nearby_spots_screen.dart';
 import 'package:xocobaby13/feature/home/presentation/screen/payment_success_screen.dart';
 import 'package:xocobaby13/feature/home/presentation/screen/recommended_spots_screen.dart';
 import 'package:xocobaby13/feature/home/presentation/screen/refund_request_screen.dart';
@@ -14,6 +15,7 @@ class HomeRouteNames {
   static const String payment = '/home/payment';
   static const String paymentSuccess = '/home/payment/success';
   static const String refundRequest = '/home/refund-request';
+  static const String popularNearby = '/home/popular-nearby';
   static const String recommended = '/home/recommended';
 }
 
@@ -91,6 +93,10 @@ class HomeRoutes {
     GoRoute(
       path: HomeRouteNames.refundRequest,
       builder: (context, state) => const RefundRequestScreen(),
+    ),
+    GoRoute(
+      path: HomeRouteNames.popularNearby,
+      builder: (context, state) => const PopularNearbySpotsScreen(),
     ),
     GoRoute(
       path: HomeRouteNames.recommended,

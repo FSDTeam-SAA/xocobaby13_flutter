@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +11,6 @@ import 'package:go_router/go_router.dart';
 import 'package:xocobaby13/feature/home/controller/live_booking_controller.dart';
 import 'package:xocobaby13/feature/home/presentation/routes/home_routes.dart';
 import 'package:xocobaby13/feature/notification/presentation/routes/notification_routes.dart';
-import 'package:xocobaby13/feature/search/presentation/routes/search_routes.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
 import 'package:xocobaby13/core/common/widget/loading/app_shimmer.dart';
 import 'package:xocobaby13/feature/profile/controller/profile_controller.dart';
@@ -24,12 +26,21 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final PageController _liveController;
   late final LiveBookingController _liveBookingController;
+  late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
+  Timer? _searchDebounce;
   bool _isLoadingNearby = false;
   String? _nearbyError;
   List<_PopularPlace> _popularPlaces = const <_PopularPlace>[];
   bool _isLoadingRecommended = false;
   String? _recommendedError;
   List<_RecommendedPlace> _recommendedPlaces = const <_RecommendedPlace>[];
+  List<_HomeSearchResult> _searchResults = const <_HomeSearchResult>[];
+  bool _isSearching = false;
+  bool _showSearchResults = false;
+  String? _searchError;
+  String _searchQuery = '';
+  int _searchRequestId = 0;
   bool _isLoadingUnread = false;
   int _unreadCount = 0;
   static const double _defaultNearbyLat = 23.8103;
@@ -73,6 +84,15 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _liveController = PageController();
     _liveBookingController = LiveBookingController.instance();
+    _searchController = TextEditingController();
+    _searchFocusNode = FocusNode()
+      ..addListener(() {
+        if (!mounted) return;
+        setState(() {
+          _showSearchResults =
+              _searchFocusNode.hasFocus && _searchQuery.isNotEmpty;
+        });
+      });
     _liveBookingController.loadLiveBookings();
     _resolveNearbyLocationAndLoad();
     _loadRecommendedSpots();
@@ -81,12 +101,119 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     _liveController.dispose();
     super.dispose();
   }
 
   void _handleLiveStatusTap(int index) {
     _liveBookingController.toggleArrivalAt(index);
+  }
+
+  void _onSearchChanged(String value) {
+    final String nextQuery = value.trim();
+    _searchDebounce?.cancel();
+
+    if (nextQuery.isEmpty) {
+      _searchRequestId++;
+      setState(() {
+        _searchQuery = '';
+        _searchError = null;
+        _isSearching = false;
+        _showSearchResults = false;
+        _searchResults = const <_HomeSearchResult>[];
+      });
+      return;
+    }
+
+    setState(() {
+      _searchQuery = nextQuery;
+      _showSearchResults = _searchFocusNode.hasFocus;
+    });
+
+    _searchDebounce = Timer(const Duration(milliseconds: 350), _searchSpots);
+  }
+
+  Future<void> _searchSpots() async {
+    final String query = _searchQuery.trim();
+    if (query.isEmpty) return;
+
+    final int requestId = ++_searchRequestId;
+    setState(() {
+      _isSearching = true;
+      _searchError = null;
+      _showSearchResults = true;
+    });
+
+    try {
+      final response = await Get.find<AuthorizedPigeon>().get(
+        ApiEndpoints.searchSpots,
+        queryParameters: <String, dynamic>{'q': query, 'limit': 6},
+      );
+      if (!mounted || requestId != _searchRequestId) return;
+
+      final responseBody = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final dynamic data = responseBody['data'];
+      final List<_HomeSearchResult> nextResults = <_HomeSearchResult>[];
+
+      if (data is List) {
+        for (final dynamic item in data) {
+          if (item is Map) {
+            nextResults.add(
+              _mapSpotToHomeSearchResult(Map<String, dynamic>.from(item)),
+            );
+          }
+        }
+      }
+
+      setState(() {
+        _searchResults = nextResults;
+        _isSearching = false;
+      });
+    } catch (_) {
+      if (!mounted || requestId != _searchRequestId) return;
+      setState(() {
+        _searchError = 'Failed to fetch search results';
+        _isSearching = false;
+      });
+    }
+  }
+
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchRequestId++;
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    setState(() {
+      _searchQuery = '';
+      _searchError = null;
+      _isSearching = false;
+      _showSearchResults = false;
+      _searchResults = const <_HomeSearchResult>[];
+    });
+  }
+
+  Future<void> _openSearchResult(_HomeSearchResult result) async {
+    final query = <String, String>{
+      'lat': result.lat.toString(),
+      'lng': result.lng.toString(),
+      'distanceKm': _nearbyDistanceKm.toString(),
+    };
+    if (result.id.isNotEmpty) {
+      query['id'] = result.id;
+    }
+    final detailsUri = Uri(
+      path: HomeRouteNames.details,
+      queryParameters: query,
+    );
+    _searchFocusNode.unfocus();
+    await context.push(detailsUri.toString());
+    if (!mounted) return;
+    _clearSearch();
   }
 
   Future<void> _resolveNearbyLocationAndLoad() async {
@@ -293,6 +420,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  _HomeSearchResult _mapSpotToHomeSearchResult(Map<String, dynamic> spot) {
+    final List<double> coords = _readCoordinates(spot['location']);
+
+    return _HomeSearchResult(
+      id: spot['_id']?.toString() ?? '',
+      title: spot['title']?.toString().trim().isNotEmpty == true
+          ? spot['title'].toString()
+          : 'Untitled Spot',
+      location: _formatLocation(spot['location']),
+      price: _readInt(spot['price']),
+      lat: coords.isNotEmpty ? coords[0] : _nearbyLat,
+      lng: coords.length > 1 ? coords[1] : _nearbyLng,
+    );
+  }
+
   String _formatLocation(dynamic location) {
     if (location is Map) {
       final String address = location['address']?.toString() ?? '';
@@ -370,11 +512,26 @@ class _HomeScreenState extends State<HomeScreen> {
     return 0;
   }
 
+  double _calculateSearchResultsHeight() {
+    if (_isSearching) return 88;
+    if (_searchError != null) return 96;
+    if (_searchResults.isEmpty) return 88;
+    final int visibleResults = _searchResults.length < 4
+        ? _searchResults.length
+        : 4;
+    return (visibleResults * 74 + 20).toDouble();
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<_PopularPlace> popularPlaces = _popularPlaces;
-
     final List<_RecommendedPlace> recommendedPlaces = _recommendedPlaces;
+    final List<_PopularPlace> nearbyPreviewPlaces = popularPlaces
+        .take(5)
+        .toList(growable: false);
+    final bool showSearchResults =
+        _showSearchResults && _searchQuery.isNotEmpty;
+    final double searchResultsHeight = _calculateSearchResultsHeight();
 
     return SafeArea(
       bottom: false,
@@ -437,10 +594,34 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _SearchField(
-              onTap: () => context.push(SearchRouteNames.fishermanSearch),
-              onSubmitted: (String value) =>
-                  _showMessage(context, 'Searching for "$value"'),
+            SizedBox(
+              height: showSearchResults ? searchResultsHeight + 62 : 46,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  _SearchField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: _onSearchChanged,
+                    onSubmitted: (_) => _searchSpots(),
+                    onClear: _searchController.text.isEmpty
+                        ? null
+                        : _clearSearch,
+                  ),
+                  if (showSearchResults)
+                    Positioned(
+                      top: 54,
+                      left: 0,
+                      right: 0,
+                      child: _HomeSearchResultsCard(
+                        isLoading: _isSearching,
+                        error: _searchError,
+                        results: _searchResults,
+                        onResultTap: _openSearchResult,
+                      ),
+                    ),
+                ],
+              ),
             ),
             Obx(() {
               final bool isLoading = _liveBookingController.isLoading.value;
@@ -543,11 +724,11 @@ class _HomeScreenState extends State<HomeScreen> {
             _SectionHeader(
               title: 'Popular Nearby',
               actionLabel: 'See all',
-              onActionTap: () => _showMessage(context, 'Popular Nearby'),
+              onActionTap: () => context.push(HomeRouteNames.popularNearby),
             ),
             const SizedBox(height: 14),
             SizedBox(
-              height: 460,
+              height: 476,
               child: _isLoadingNearby
                   ? ListView.separated(
                       scrollDirection: Axis.horizontal,
@@ -589,10 +770,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   : ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      itemCount: popularPlaces.length,
+                      itemCount: nearbyPreviewPlaces.length,
                       separatorBuilder: (_, __) => const SizedBox(width: 18),
                       itemBuilder: (BuildContext context, int index) {
-                        final _PopularPlace place = popularPlaces[index];
+                        final _PopularPlace place = nearbyPreviewPlaces[index];
                         return _PopularCard(
                           data: place,
                           onViewDetails: () {
@@ -791,43 +972,245 @@ class _NotificationBell extends StatelessWidget {
 }
 
 class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
-  final VoidCallback? onTap;
+  final VoidCallback? onClear;
 
-  const _SearchField({required this.onSubmitted, this.onTap});
+  const _SearchField({
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
+    required this.onSubmitted,
+    this.onClear,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 46,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x1A0F172A),
-            blurRadius: 16,
-            offset: Offset(0, 8),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[Color(0xD9FFFFFF), Color(0xA6FFFFFF)],
+            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0x99FFFFFF), width: 1.2),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x140F172A),
+                blurRadius: 22,
+                offset: Offset(0, 10),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: TextField(
-        onSubmitted: onSubmitted,
-        onTap: onTap,
-        readOnly: onTap != null,
-        decoration: const InputDecoration(
-          prefixIcon: Icon(CupertinoIcons.search, color: Color(0xFF1E7CC8)),
-          hintText: 'Search',
-          hintStyle: TextStyle(
-            color: Color(0xFF1E7CC8),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            onChanged: onChanged,
+            onSubmitted: onSubmitted,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(
+                CupertinoIcons.search,
+                color: Color(0xFF1E7CC8),
+              ),
+              hintText: 'Search',
+              hintStyle: const TextStyle(
+                color: Color(0xFF1E7CC8),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              suffixIcon: onClear == null
+                  ? null
+                  : IconButton(
+                      onPressed: onClear,
+                      icon: const Icon(
+                        CupertinoIcons.clear_circled_solid,
+                        size: 18,
+                        color: Color(0xFF8BA0B5),
+                      ),
+                    ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 13),
+            ),
+            style: const TextStyle(color: Color(0xFF1D2A36), fontSize: 14),
           ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 10),
         ),
-        style: const TextStyle(color: Color(0xFF1D2A36), fontSize: 14),
+      ),
+    );
+  }
+}
+
+class _HomeSearchResultsCard extends StatelessWidget {
+  final bool isLoading;
+  final String? error;
+  final List<_HomeSearchResult> results;
+  final ValueChanged<_HomeSearchResult> onResultTap;
+
+  const _HomeSearchResultsCard({
+    required this.isLoading,
+    required this.error,
+    required this.results,
+    required this.onResultTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 316),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: <Color>[Color(0xD9FFFFFF), Color(0xB3EEF6FF)],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xAAFFFFFF), width: 1.2),
+              boxShadow: const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x220F172A),
+                  blurRadius: 26,
+                  offset: Offset(0, 14),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 88,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : error != null
+                  ? SizedBox(
+                      height: 96,
+                      child: Center(
+                        child: Text(
+                          error!,
+                          style: const TextStyle(
+                            color: Color(0xFF6A7B8C),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    )
+                  : results.isEmpty
+                  ? const SizedBox(
+                      height: 88,
+                      child: Center(
+                        child: Text(
+                          'No matching spots found',
+                          style: TextStyle(
+                            color: Color(0xFF6A7B8C),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shrinkWrap: true,
+                      itemCount: results.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (BuildContext context, int index) {
+                        final _HomeSearchResult result = results[index];
+                        return _HomeSearchResultTile(
+                          result: result,
+                          onTap: () => onResultTap(result),
+                        );
+                      },
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeSearchResultTile extends StatelessWidget {
+  final _HomeSearchResult result;
+  final VoidCallback onTap;
+
+  const _HomeSearchResultTile({required this.result, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAF4FF),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                CupertinoIcons.location_solid,
+                color: Color(0xFF1787CF),
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    result.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1D2A36),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    result.location,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF6A7B8C),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '\$${result.price}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1787CF),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1151,6 +1534,50 @@ class _LiveMetaRow extends StatelessWidget {
   }
 }
 
+class _PopularMetaItem extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color iconColor;
+  final Color textColor;
+  final double maxWidth;
+  final FontWeight fontWeight;
+
+  const _PopularMetaItem({
+    required this.icon,
+    required this.text,
+    required this.maxWidth,
+    this.iconColor = const Color(0xFF3A4A5A),
+    this.textColor = const Color(0xFF3A4A5A),
+    this.fontWeight = FontWeight.w500,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 16, color: iconColor),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: textColor,
+                fontWeight: fontWeight,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PopularCard extends StatelessWidget {
   final _PopularPlace data;
   final VoidCallback onViewDetails;
@@ -1159,6 +1586,9 @@ class _PopularCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final List<String> visibleTags = data.tags.take(3).toList(growable: false);
+    final int hiddenTagCount = data.tags.length - visibleTags.length;
+
     return Container(
       width: 300,
       decoration: BoxDecoration(
@@ -1200,6 +1630,8 @@ class _PopularCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         data.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -1248,41 +1680,15 @@ class _PopularCard extends StatelessWidget {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const Icon(
-                          CupertinoIcons.location_solid,
-                          size: 16,
-                          color: Color(0xFF3A4A5A),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          data.location,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF3A4A5A),
-                          ),
-                        ),
-                      ],
+                    _PopularMetaItem(
+                      icon: CupertinoIcons.location_solid,
+                      text: data.location,
+                      maxWidth: 150,
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const Icon(
-                          CupertinoIcons.calendar,
-                          size: 16,
-                          color: Color(0xFF3A4A5A),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          data.date,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF3A4A5A),
-                          ),
-                        ),
-                      ],
+                    _PopularMetaItem(
+                      icon: CupertinoIcons.calendar,
+                      text: data.date,
+                      maxWidth: 110,
                     ),
                   ],
                 ),
@@ -1292,51 +1698,47 @@ class _PopularCard extends StatelessWidget {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const Icon(
-                          CupertinoIcons.star_fill,
-                          size: 16,
-                          color: Color(0xFFF2B01E),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${data.rating}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1D2A36),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 170),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          const Icon(
+                            CupertinoIcons.star_fill,
+                            size: 16,
+                            color: Color(0xFFF2B01E),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${data.reviews} Reviews)',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6A7B8C),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${data.rating}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1D2A36),
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              '(${data.reviews} Reviews)',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF6A7B8C),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const Icon(
-                          CupertinoIcons.time,
-                          size: 16,
-                          color: Color(0xFF1D2A36),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          data.timeRange,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF1D2A36),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    _PopularMetaItem(
+                      icon: CupertinoIcons.time,
+                      text: data.timeRange,
+                      maxWidth: 100,
+                      iconColor: const Color(0xFF1D2A36),
+                      textColor: const Color(0xFF1D2A36),
+                      fontWeight: FontWeight.w600,
                     ),
                   ],
                 ),
@@ -1344,30 +1746,49 @@ class _PopularCard extends StatelessWidget {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: data.tags
-                      .map(
-                        (String tag) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F3F7),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            tag,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF39424E),
-                              fontWeight: FontWeight.w600,
-                            ),
+                  children: <Widget>[
+                    ...visibleTags.map(
+                      (String tag) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F3F7),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          tag,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF39424E),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      )
-                      .toList(),
+                      ),
+                    ),
+                    if (hiddenTagCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE6EEF8),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '+$hiddenTagCount more',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF1787CF),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Row(
                   children: <Widget>[
                     _AvatarStack(avatars: data.attendees),
@@ -1378,6 +1799,8 @@ class _PopularCard extends StatelessWidget {
                         children: <Widget>[
                           Text(
                             data.attendeesLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
@@ -1387,6 +1810,8 @@ class _PopularCard extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             data.attendeesSubtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12,
                               color: Color(0xFF6A7B8C),
@@ -1397,7 +1822,7 @@ class _PopularCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 SizedBox(
                   width: double.infinity,
                   height: 34,
@@ -1766,6 +2191,24 @@ class _RecommendedCardSkeleton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HomeSearchResult {
+  final String id;
+  final String title;
+  final String location;
+  final int price;
+  final double lat;
+  final double lng;
+
+  const _HomeSearchResult({
+    required this.id,
+    required this.title,
+    required this.location,
+    required this.price,
+    required this.lat,
+    required this.lng,
+  });
 }
 
 class _PopularPlace {
