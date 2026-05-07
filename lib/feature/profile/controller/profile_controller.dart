@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_pigeon/app_pigeon.dart';
 import 'package:dio/dio.dart' as dio;
 import 'package:get/get.dart';
@@ -9,16 +11,7 @@ import 'package:xocobaby13/feature/profile/model/activity_status_model.dart';
 import 'package:xocobaby13/feature/profile/model/user_profile_data_model.dart';
 
 class ProfileController extends GetxController {
-  final Rx<ActivityStatusModel> selectedActivityStatus =
-      ActivityStatusModel.ongoing.obs;
-
-  final RxBool isLoadingActivities = false.obs;
-  final RxnString activitiesError = RxnString();
-  final AuthorizedPigeon _appPigeon = Get.find<AuthorizedPigeon>();
-  bool _isFetchingProfile = false;
-  XFile? _pendingAvatarFile;
-
-  final Rx<UserProfileDataModel> profile = const UserProfileDataModel(
+  static const UserProfileDataModel _defaultProfile = UserProfileDataModel(
     name: 'Unknown User',
     email: 'you@gmail.com',
     phone: '(000) 000-0000',
@@ -26,7 +19,21 @@ class ProfileController extends GetxController {
     avatarAssetPath: 'assets/images/Profile_avatar_placeholder_large.png',
     avatarUrl: '',
     avatarBytes: null,
-  ).obs;
+  );
+
+  final Rx<ActivityStatusModel> selectedActivityStatus =
+      ActivityStatusModel.ongoing.obs;
+
+  final RxBool isLoadingActivities = false.obs;
+  final RxnString activitiesError = RxnString();
+  final AuthorizedPigeon _appPigeon = Get.find<AuthorizedPigeon>();
+  StreamSubscription<AuthStatus>? _authSubscription;
+  bool _isFetchingProfile = false;
+  XFile? _pendingAvatarFile;
+  String _activeUserId = '';
+  int _authEpoch = 0;
+
+  final Rx<UserProfileDataModel> profile = _defaultProfile.obs;
 
   final RxList<ActivityItemModel> _activityItems = <ActivityItemModel>[].obs;
 
@@ -37,18 +44,25 @@ class ProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchProfile();
-    loadActivities();
+    _subscribeToAuthChanges();
+    _syncWithCurrentAuth();
   }
 
-  Future<void> fetchProfile() async {
+  Future<void> fetchProfile({bool force = false}) async {
     if (_isFetchingProfile) {
       return;
     }
+    if (!force && _activeUserId.isEmpty) {
+      return;
+    }
+    final int requestEpoch = _authEpoch;
     _isFetchingProfile = true;
 
     try {
       final response = await _appPigeon.get(ApiEndpoints.getCurrentProfile);
+      if (requestEpoch != _authEpoch) {
+        return;
+      }
       final statusCode = response.statusCode ?? 0;
       if (statusCode < 200 || statusCode >= 300) {
         return;
@@ -74,8 +88,12 @@ class ProfileController extends GetxController {
         .toList();
   }
 
-  Future<void> loadActivities() async {
+  Future<void> loadActivities({bool force = false}) async {
     if (isLoadingActivities.value) return;
+    if (!force && _activeUserId.isEmpty) {
+      return;
+    }
+    final int requestEpoch = _authEpoch;
     isLoadingActivities.value = true;
     activitiesError.value = null;
     try {
@@ -98,12 +116,114 @@ class ProfileController extends GetxController {
         items.addAll(batch);
       }
 
+      if (requestEpoch != _authEpoch) {
+        return;
+      }
       _activityItems.assignAll(items);
     } catch (e) {
+      if (requestEpoch != _authEpoch) {
+        return;
+      }
       activitiesError.value = 'Failed to load activities';
     } finally {
       isLoadingActivities.value = false;
     }
+  }
+
+  void _subscribeToAuthChanges() {
+    _authSubscription = _appPigeon.authStream.listen(_handleAuthStatus);
+  }
+
+  Future<void> _syncWithCurrentAuth() async {
+    try {
+      final authRecord = await _appPigeon.getCurrentAuthRecord();
+      final String userId = _resolveUserIdFromAuthRecord(authRecord);
+      if (userId.isEmpty) {
+        _handleSignedOut();
+        return;
+      }
+
+      _activeUserId = userId;
+      fetchProfile(force: true);
+      loadActivities(force: true);
+    } catch (_) {
+      _handleSignedOut();
+    }
+  }
+
+  void _handleAuthStatus(AuthStatus status) {
+    if (status is Authenticated) {
+      final String nextUserId = _resolveUserIdFromAuthenticated(status);
+      final bool userChanged =
+          nextUserId.isNotEmpty && nextUserId != _activeUserId;
+      _activeUserId = nextUserId;
+      if (userChanged) {
+        _resetUserScopedState();
+      }
+      fetchProfile(force: true);
+      loadActivities(force: true);
+      return;
+    }
+
+    _handleSignedOut();
+  }
+
+  void _handleSignedOut() {
+    if (_activeUserId.isEmpty &&
+        profile.value == _defaultProfile &&
+        _activityItems.isEmpty) {
+      return;
+    }
+    _activeUserId = '';
+    _resetUserScopedState();
+  }
+
+  void _resetUserScopedState() {
+    _authEpoch += 1;
+    _pendingAvatarFile = null;
+    _isFetchingProfile = false;
+    isLoadingActivities.value = false;
+    activitiesError.value = null;
+    _activityItems.clear();
+    profile.value = _defaultProfile;
+    selectedActivityStatus.value = ActivityStatusModel.ongoing;
+  }
+
+  String _resolveUserIdFromAuthenticated(Authenticated status) {
+    final Map<String, dynamic> data = Map<String, dynamic>.from(
+      status.auth.data,
+    );
+    return _pickFirstString(<dynamic>[data['id'], data['_id'], data['userId']]);
+  }
+
+  String _resolveUserIdFromAuthRecord(dynamic authRecord) {
+    if (authRecord == null) return '';
+    final Map<String, dynamic> data = authRecord.data is Map
+        ? Map<String, dynamic>.from(authRecord.data as Map)
+        : <String, dynamic>{};
+    final Map<String, dynamic> record = Map<String, dynamic>.from(
+      authRecord.toJson(),
+    );
+    return _pickFirstString(<dynamic>[
+      data['id'],
+      data['_id'],
+      data['userId'],
+      record['uid'],
+      record['userId'],
+      record['user_id'],
+      record['id'],
+      record['_id'],
+    ]);
+  }
+
+  String _pickFirstString(List<dynamic> values) {
+    for (final dynamic value in values) {
+      final String text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty) {
+        return text;
+      }
+    }
+    return '';
   }
 
   Future<List<ActivityItemModel>> _fetchBookingsForStatus(
@@ -394,6 +514,12 @@ class ProfileController extends GetxController {
       return Get.find<ProfileController>();
     }
     return Get.put<ProfileController>(ProfileController());
+  }
+
+  @override
+  void onClose() {
+    _authSubscription?.cancel();
+    super.onClose();
   }
 }
 
