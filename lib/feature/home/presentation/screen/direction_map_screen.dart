@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmap;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:xocobaby13/core/common/widget/button/loading_buttons.dart';
@@ -27,7 +27,7 @@ class DirectionMapScreen extends StatefulWidget {
 }
 
 class _DirectionMapScreenState extends State<DirectionMapScreen> {
-  final MapController _mapController = MapController();
+  gmap.GoogleMapController? _mapController;
   LatLng? _currentLocation;
   bool _isResolvingLocation = true;
   String? _locationError;
@@ -263,25 +263,45 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
     return '${hours}h ${minutes}m';
   }
 
+  gmap.LatLng _toGmapLatLng(LatLng point) {
+    return gmap.LatLng(point.latitude, point.longitude);
+  }
+
+  gmap.LatLngBounds _boundsFromPoints(List<LatLng> points) {
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+    for (final LatLng point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+    return gmap.LatLngBounds(
+      southwest: gmap.LatLng(minLat, minLng),
+      northeast: gmap.LatLng(maxLat, maxLng),
+    );
+  }
+
   void _updateCamera() {
+    final gmap.GoogleMapController? controller = _mapController;
+    if (controller == null) return;
+
     final LatLng? destination = _destination;
     if (destination == null) return;
 
     if (_routePoints.length >= 2) {
-      final LatLngBounds bounds = LatLngBounds.fromPoints(_routePoints);
-      _mapController.fitCamera(
-        CameraFit.bounds(
-          bounds: bounds,
-          padding: const EdgeInsets.fromLTRB(40, 120, 40, 220),
-          maxZoom: 15,
-        ),
-      );
+      final gmap.LatLngBounds bounds = _boundsFromPoints(_routePoints);
+      controller.animateCamera(gmap.CameraUpdate.newLatLngBounds(bounds, 80));
       return;
     }
 
     final LatLng? currentLocation = _currentLocation;
     if (currentLocation == null) {
-      _mapController.move(destination, 15);
+      controller.animateCamera(
+        gmap.CameraUpdate.newLatLngZoom(_toGmapLatLng(destination), 15),
+      );
       return;
     }
 
@@ -292,7 +312,9 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
       destination.longitude,
     );
     if (meters > 50000) {
-      _mapController.move(destination, 15);
+      controller.animateCamera(
+        gmap.CameraUpdate.newLatLngZoom(_toGmapLatLng(destination), 15),
+      );
       return;
     }
 
@@ -309,7 +331,9 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
         : meters > 1500
         ? 13.5
         : 14.5;
-    _mapController.move(center, zoom);
+    controller.animateCamera(
+      gmap.CameraUpdate.newLatLngZoom(_toGmapLatLng(center), zoom),
+    );
   }
 
   Future<void> _startNavigation() async {
@@ -368,60 +392,39 @@ class _DirectionMapScreenState extends State<DirectionMapScreen> {
       body: SafeArea(
         child: Stack(
           children: <Widget>[
-            FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: _initialCenter,
-                initialZoom: destination == null ? 9 : 15,
-                onMapReady: _updateCamera,
+            gmap.GoogleMap(
+              initialCameraPosition: gmap.CameraPosition(
+                target: _toGmapLatLng(_initialCenter),
+                zoom: destination == null ? 9 : 15,
               ),
-              children: <Widget>[
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.xocobaby13',
-                ),
+              onMapCreated: (gmap.GoogleMapController controller) {
+                _mapController = controller;
+                _updateCamera();
+              },
+              minMaxZoomPreference: const gmap.MinMaxZoomPreference(null, 15),
+              myLocationEnabled: _currentLocation != null,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              mapToolbarEnabled: false,
+              polylines: <gmap.Polyline>{
                 if (linePoints.length >= 2)
-                  PolylineLayer(
-                    polylines: <Polyline<LatLng>>[
-                      Polyline<LatLng>(
-                        points: linePoints,
-                        strokeWidth: 5,
-                        color: const Color(0xFF1787CF),
-                      ),
-                    ],
+                  gmap.Polyline(
+                    polylineId: const gmap.PolylineId('route'),
+                    points: linePoints.map(_toGmapLatLng).toList(),
+                    width: 5,
+                    color: const Color(0xFF1787CF),
                   ),
-                MarkerLayer(
-                  markers: <Marker>[
-                    if (destination case final LatLng destinationPoint)
-                      Marker(
-                        point: destinationPoint,
-                        width: 42,
-                        height: 52,
-                        child: const _MapPin(color: Color(0xFFFF3B30)),
-                      ),
-                    if (_currentLocation case final LatLng currentLocationPoint)
-                      Marker(
-                        point: currentLocationPoint,
-                        width: 20,
-                        height: 20,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1787CF),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 3),
-                            boxShadow: const <BoxShadow>[
-                              BoxShadow(
-                                color: Color(0x26000000),
-                                blurRadius: 8,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
+              },
+              markers: <gmap.Marker>{
+                if (destination case final LatLng destinationPoint)
+                  gmap.Marker(
+                    markerId: const gmap.MarkerId('destination'),
+                    position: _toGmapLatLng(destinationPoint),
+                    icon: gmap.BitmapDescriptor.defaultMarkerWithHue(
+                      gmap.BitmapDescriptor.hueRed,
+                    ),
+                  ),
+              },
             ),
             Positioned(
               top: 12,
@@ -610,16 +613,5 @@ class _DirectionInfo extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-class _MapPin extends StatelessWidget {
-  const _MapPin({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Icon(Icons.location_on, color: color, size: 42);
   }
 }
