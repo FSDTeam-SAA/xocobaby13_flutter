@@ -1,9 +1,9 @@
 import 'package:app_pigeon/app_pigeon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmap;
 import 'package:latlong2/latlong.dart';
 import 'package:xocobaby13/core/constants/api_endpoints.dart';
 import 'package:xocobaby13/core/extensions/app_navigation_extension.dart';
@@ -1530,55 +1530,72 @@ class _HomeDetailsScreenState extends State<HomeDetailsScreen> {
                           child: SizedBox(
                             height: 240,
                             width: double.infinity,
-                            child: FlutterMap(
-                              options: MapOptions(
-                                initialCenter: mapCenter,
-                                initialZoom: mapZoom,
-                                interactionOptions: const InteractionOptions(
-                                  flags: InteractiveFlag.none,
+                            child: gmap.GoogleMap(
+                              initialCameraPosition: gmap.CameraPosition(
+                                target: gmap.LatLng(
+                                  mapCenter.latitude,
+                                  mapCenter.longitude,
                                 ),
-                                onTap: (tapPos, _) {
-                                  if (spotLatLng == null) {
-                                    _showMessage(
-                                      context,
-                                      'This spot does not have a saved map location yet',
-                                    );
-                                    return;
-                                  }
-                                  final Uri directionUri = Uri(
-                                    path: HomeRouteNames.direction,
-                                    queryParameters: <String, String>{
-                                      'title': title,
-                                      'address': locationLabel,
-                                      'lat': spotLatLng.latitude.toString(),
-                                      'lng': spotLatLng.longitude.toString(),
-                                    },
-                                  );
-                                  context.push(directionUri.toString());
-                                },
+                                zoom: mapZoom,
                               ),
-                              children: <Widget>[
-                                TileLayer(
-                                  urlTemplate:
-                                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                  userAgentPackageName:
-                                      'com.example.xocobaby13',
+                              zoomGesturesEnabled: false,
+                              scrollGesturesEnabled: false,
+                              rotateGesturesEnabled: false,
+                              tiltGesturesEnabled: false,
+                              zoomControlsEnabled: false,
+                              myLocationButtonEnabled: false,
+                              mapToolbarEnabled: false,
+                              compassEnabled: false,
+                              markers: <gmap.Marker>{
+                                gmap.Marker(
+                                  markerId: const gmap.MarkerId(
+                                    'spot_location',
+                                  ),
+                                  position: gmap.LatLng(
+                                    mapCenter.latitude,
+                                    mapCenter.longitude,
+                                  ),
+                                  onTap: () {
+                                    if (spotLatLng == null) {
+                                      _showMessage(
+                                        context,
+                                        'This spot does not have a saved map location yet',
+                                      );
+                                      return;
+                                    }
+                                    final Uri directionUri = Uri(
+                                      path: HomeRouteNames.direction,
+                                      queryParameters: <String, String>{
+                                        'title': title,
+                                        'address': locationLabel,
+                                        'lat': spotLatLng.latitude.toString(),
+                                        'lng': spotLatLng.longitude
+                                            .toString(),
+                                      },
+                                    );
+                                    context.push(directionUri.toString());
+                                  },
                                 ),
-                                MarkerLayer(
-                                  markers: <Marker>[
-                                    Marker(
-                                      point: mapCenter,
-                                      width: 36,
-                                      height: 46,
-                                      child: const Icon(
-                                        Icons.location_pin,
-                                        color: Color(0xFFE23A3A),
-                                        size: 40,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                              },
+                              onTap: (gmap.LatLng _) {
+                                if (spotLatLng == null) {
+                                  _showMessage(
+                                    context,
+                                    'This spot does not have a saved map location yet',
+                                  );
+                                  return;
+                                }
+                                final Uri directionUri = Uri(
+                                  path: HomeRouteNames.direction,
+                                  queryParameters: <String, String>{
+                                    'title': title,
+                                    'address': locationLabel,
+                                    'lat': spotLatLng.latitude.toString(),
+                                    'lng': spotLatLng.longitude.toString(),
+                                  },
+                                );
+                                context.push(directionUri.toString());
+                              },
                             ),
                           ),
                         ),
